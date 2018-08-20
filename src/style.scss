@@ -1,0 +1,78 @@
+* {
+    box-sizing: border-box;
+}
+
+BODY {
+    font-family: sans-serif;
+}
+
+.todo-list {
+
+}
+
+.todo-view {
+    max-width: 30em;
+
+    .extra {
+        display: none;
+    }
+
+    .title {
+        padding-top: 0.25em;
+        padding-bottom: 0.25em;
+
+        SPAN {
+            cursor: pointer;
+        }
+
+        INPUT[type=text] {
+            width: 100%;
+        }
+    }
+
+    .description {
+        padding-top: 0.25em;
+        padding-bottom: 0.25em;
+        border-top: 1px solid #666;
+        border-bottom: 1px solid #666;
+        white-space: pre-wrap;
+        TEXTAREA {
+            width: 100%;
+            height: 4em;
+        }
+    }
+
+    .buttons {
+        padding-top: 0.25em;
+        text-align: right;
+
+        BUTTON {
+            margin-left: 0.25em;
+        }
+    }
+
+    &.expanded {
+        .extra {
+            display: block;
+        }
+    }
+
+    &.edit {
+        .description {
+            padding-top: 0;
+            padding-bottom: 0;
+            border-width: 0;
+        }
+    }
+
+    &.add {
+        padding-top: 0.25em;
+        padding-bottom: 0.25em;
+        list-style-type: circle;
+        color: #999;
+
+        .add-button {
+            cursor: pointer;
+        }
+    }
+}
