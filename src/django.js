@@ -1,24 +1,9 @@
-const baseURL = 'http://127.0.0.1:8000/api/v1';
-
 class Django {
     /**
      * Remember the data source
      */
     constructor(dataSource) {
         this.dataSource = dataSource;
-    }
-
-    /**
-     * Fetch one object from data source
-     *
-     * @param  {String} url
-     * @param  {Object} options
-     *
-     * @return {Promise<Object>}
-     */
-    fetchOne(url, options) {
-        url = expandURL(url);
-        return this.dataSource.fetchOne(url, options);
     }
 
     /**
@@ -30,39 +15,32 @@ class Django {
      * @return {Promise<Array>}
      */
     fetchList(url, options) {
-        url = expandURL(url);
         return this.dataSource.fetchList(url, options);
     }
 
-    /**
-     * Fetch multiple objects from data source
-     *
-     * @param  {Array<String>} urls
-     * @param  {Object} options
-     *
-     * @return {Promise<Object>}
-     */
-    fetchMultiple(urls, options) {
-        urls = urls.map(expandURL);
-        return this.dataSource.fetchMultiple(urls, options);
-    }
-
     saveOne(url, object) {
-        url = expandURL(url);
-        return this.dataSource.saveOne(url, object);
+        if (object.id) {
+            return this.dataSource.updateOne(url, object);
+        } else {
+            return this.dataSource.insertOne(url, object);
+        }
     }
 
     deleteOne(url, object) {
-        url = expandURL(url);
         return this.dataSource.deleteOne(url, object);
     }
-}
 
-function expandURL(url) {
-    if (!/^https?:/.test(url)) {
-        url = baseURL + url;
+    authenticate(loginURL, credentials, allowURLs) {
+        return this.dataSource.authenticate(loginURL, credentials, allowURLs);
     }
-    return url;
+
+    authorize(loginURL, token, allowURLs) {
+        return this.dataSource.authorize(loginURL, token, allowURLs);
+    }
+
+    cancelAuthentication(allowURLs) {
+        return this.dataSource.cancelAuthentication(allowURLs);
+    }
 }
 
 export {

@@ -21,7 +21,12 @@ class TodoList extends AsyncComponent {
             django
         };
         meanwhile.show(<TodoListSync {...props} />);
-        props.todos = await django.fetchList('/');
+        let options = {
+            afterInsert: 'push',
+            afterUpdate: 'replace',
+        };
+        props.todos = await django.fetchList('/', options);
+        props.todos.more();
         return <TodoListSync {...props} />;
     }
 }

@@ -58,11 +58,11 @@ class TodoView extends Component {
         return (
             <li className="todo-view expanded edit">
                 <div className="title">
-                    <input type="text" value={draft.title || ''} onChange={this.handleTitleChange} />
+                    <input type="text" value={draft.title || ''} onInput={this.handleTitleInput} />
                 </div>
                 <div className="extra">
                     <div className="description">
-                        <textarea value={draft.description || ''} onChange={this.handleDescriptionChange} />
+                        <textarea value={draft.description || ''} onInput={this.handleDescriptionInput} />
                     </div>
                     <div className="buttons">
                         <button onClick={this.handleSaveClick}>Save</button>
@@ -116,13 +116,13 @@ class TodoView extends Component {
         this.setState({ editing: false });
     }
 
-    handleTitleChange = (evt) => {
+    handleTitleInput = (evt) => {
         let { draft } = this.state;
         draft = Object.assign({}, draft, { title: evt.target.value });
         this.setState({ draft });
     }
 
-    handleDescriptionChange = (evt) => {
+    handleDescriptionInput = (evt) => {
         let { draft } = this.state;
         draft = Object.assign({}, draft, { description: evt.target.value });
         this.setState({ draft });

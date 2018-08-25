@@ -11,7 +11,7 @@ var event = process.env.npm_lifecycle_event;
 
 module.exports = {
     context: Path.resolve('./src'),
-    entry: './main',
+    entry: './bootstrap',
     output: {
         path: Path.resolve('./www'),
         filename: 'app.js',
@@ -19,7 +19,6 @@ module.exports = {
     resolve: {
         extensions: [ '.js', '.jsx' ],
         modules: [ Path.resolve('./src'), Path.resolve('./node_modules') ],
-        symlinks: false,
     },
     module: {
         rules: [
@@ -33,12 +32,16 @@ module.exports = {
                         'babel-preset-react',
                         'babel-preset-stage-0',
                         'babel-preset-stage-2',
-                    ],
+                    ].map((name) => {
+                        return Path.resolve(`./node_modules/${name}`);
+                    }),
                     plugins: [
-                        'syntax-async-functions',
-                        'syntax-class-properties',
-                        'transform-regenerator',
-                    ]
+                        'babel-plugin-syntax-async-functions',
+                        'babel-plugin-syntax-class-properties',
+                        'babel-plugin-transform-regenerator',
+                    ].map((name) => {
+                        return Path.resolve(`./node_modules/${name}`);
+                    })
                 }
             },
             {
