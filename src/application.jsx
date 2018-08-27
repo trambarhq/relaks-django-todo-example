@@ -14,7 +14,6 @@ class Application extends Component {
         super(props);
         let { dataSource } = this.props;
         this.state = {
-            dataSource,
             django: new Django(dataSource),
             authenticating: false,
             authenticationError: null,

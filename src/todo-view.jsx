@@ -5,8 +5,8 @@ import { h, Component } from 'preact';
 class TodoView extends Component {
     static displayName = 'TodoView';
 
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             expanded: false,
             editing: false,

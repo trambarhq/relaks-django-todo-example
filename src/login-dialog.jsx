@@ -5,8 +5,8 @@ import { h, Component } from 'preact';
 class LoginDialog extends Component {
     static displayName = 'LoginDialog';
 
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             username: '',
             password: '',
