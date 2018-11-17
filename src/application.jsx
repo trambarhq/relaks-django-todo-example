@@ -1,13 +1,12 @@
-import { h, Component } from 'preact';
+import React, { PureComponent } from 'react';
 import Django from 'django';
 import TodoList from 'todo-list';
 import LoginDialog from 'login-dialog';
+import ErrorBoundary from 'error-boundary';
 
 import 'style.scss';
 
-/** @jsx h */
-
-class Application extends Component {
+class Application extends PureComponent {
     static displayName = 'Application';
 
     constructor(props) {
@@ -36,9 +35,14 @@ class Application extends Component {
         };
         return (
             <div>
+                <button className="logout" onClick={this.handleLogOutClick}>
+                    Log out
+                </button>
                 <h1>To-Do list</h1>
-                <TodoList {...listProps} />
-                <LoginDialog {...dialogProps} />
+                <ErrorBoundary>
+                    <TodoList {...listProps} />
+                    <LoginDialog {...dialogProps} />
+                </ErrorBoundary>
             </div>
         );
     }
@@ -51,16 +55,7 @@ class Application extends Component {
         dataSource.addEventListener('change', this.handleDataSourceChange);
         dataSource.addEventListener('authentication', this.handleDataSourceAuthentication);
         dataSource.addEventListener('authorization', this.handleDataSourceAuthorization);
-    }
-
-    /**
-     * Remove change handlers when component mounts
-     */
-    componentWillUnmount() {
-        let { dataSource } = this.props;
-        dataSource.removeEventListener('change', this.handleDataSourceChange);
-        dataSource.removeEventListener('authentication', this.handleDataSourceAuthentication);
-        dataSource.removeEventListener('authorization', this.handleDataSourceAuthorization);
+        dataSource.addEventListener('deauthorization', this.handleDataSourceDeauthorization);
     }
 
     /**
@@ -81,7 +76,7 @@ class Application extends Component {
         let { django } = this.state;
         let token = sessionStorage.token;
         if (token) {
-            django.authorize('/rest-auth/login/', token);
+            django.authorize(token);
         } else {
             this.setState({ authenticating: true });
         }
@@ -98,20 +93,26 @@ class Application extends Component {
     }
 
     /**
-     * Called when the user submits
+     * Called when the data source has lost authorization
      *
-     * @param  {[type]}  evt
+     * @param  {RelaksDjangoDataSourceEvent} evt
+     */
+    handleDataSourceDeauthorization = (evt) => {
+        delete sessionStorage.token;
+    }
+
+    /**
+     * Called when the user submits a username and password
      *
-     * @return {Promise}
+     * @param  {Object}  evt
      */
     handleLoginAttempt = async (evt) => {
         let { django } = this.state;
         let credentials = evt.credentials;
         try {
-            await django.authenticate('/rest-auth/login/', credentials);
+            await django.authenticate(credentials);
             this.setState({ authenticating: false });
         } catch (err) {
-            console.error(err);
             this.setState({ authenticationError: err.message });
         }
     }
@@ -120,6 +121,11 @@ class Application extends Component {
         let { django } = this.state;
         this.setState({ authenticating: false });
         django.cancelAuthentication();
+    }
+
+    handleLogOutClick = (evt) => {
+        let { django } = this.state;
+        django.revokeAuthorization();
     }
 }
 

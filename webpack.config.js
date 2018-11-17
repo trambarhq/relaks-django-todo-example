@@ -11,7 +11,7 @@ var event = process.env.npm_lifecycle_event;
 
 module.exports = {
     context: Path.resolve('./src'),
-    entry: './bootstrap',
+    entry: './main',
     output: {
         path: Path.resolve('./www'),
         filename: 'app.js',

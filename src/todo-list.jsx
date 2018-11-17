@@ -1,8 +1,6 @@
-import { h, Component } from 'preact';
-import { AsyncComponent } from 'relaks/preact';
+import React, { PureComponent } from 'react';
+import { AsyncComponent } from 'relaks';
 import TodoView from 'todo-view';
-
-/** @jsx h */
 
 class TodoList extends AsyncComponent {
     static displayName = 'TodoList';
@@ -24,6 +22,7 @@ class TodoList extends AsyncComponent {
         let options = {
             afterInsert: 'push',
             afterUpdate: 'replace',
+            afterDelete: 'remove',
         };
         props.todos = await django.fetchList('/', options);
         props.todos.more();
@@ -31,7 +30,7 @@ class TodoList extends AsyncComponent {
     }
 }
 
-class TodoListSync extends Component {
+class TodoListSync extends PureComponent {
     static displayName = 'TodoListSync';
 
     /**

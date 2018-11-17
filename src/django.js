@@ -1,19 +1,11 @@
+const loginURL = '/rest-auth/login/';
+const logoutURL = '/rest-auth/logout/';
+
 class Django {
-    /**
-     * Remember the data source
-     */
     constructor(dataSource) {
         this.dataSource = dataSource;
     }
 
-    /**
-     * Fetch a list of objects from data source
-     *
-     * @param  {String} url
-     * @param  {Object} options
-     *
-     * @return {Promise<Array>}
-     */
     fetchList(url, options) {
         return this.dataSource.fetchList(url, options);
     }
@@ -30,19 +22,24 @@ class Django {
         return this.dataSource.deleteOne(url, object);
     }
 
-    authenticate(loginURL, credentials, allowURLs) {
-        return this.dataSource.authenticate(loginURL, credentials, allowURLs);
+    authenticate(credentials) {
+        return this.dataSource.authenticate(loginURL, credentials);
     }
 
-    authorize(loginURL, token, allowURLs) {
-        return this.dataSource.authorize(loginURL, token, allowURLs);
+    authorize(token) {
+        return this.dataSource.authorize(token);
     }
 
-    cancelAuthentication(allowURLs) {
-        return this.dataSource.cancelAuthentication(allowURLs);
+    cancelAuthentication() {
+        return this.dataSource.cancelAuthentication();
+    }
+
+    revokeAuthorization() {
+        return this.dataSource.revokeAuthorization(logoutURL);
     }
 }
 
 export {
     Django as default,
+    Django,
 };

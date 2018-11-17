@@ -1,8 +1,6 @@
-import { h, Component } from 'preact';
+import React, { PureComponent } from 'react';
 
-/** @jsx h */
-
-class LoginDialog extends Component {
+class LoginDialog extends PureComponent {
     static displayName = 'LoginDialog';
 
     constructor(props) {
@@ -17,7 +15,7 @@ class LoginDialog extends Component {
         let { show } = this.props;
         let { username, password } = this.state;
         if (!show) {
-            return;
+            return null;
         }
         let disabled = !username.trim() || !password.trim();
         return (
@@ -27,11 +25,11 @@ class LoginDialog extends Component {
                 <form onSubmit={this.handleFormSubmit}>
                     <div className="label">Username or E-mail:</div>
                     <div className="field">
-                        <input type="text" value={username} onInput={this.handleUsernameInput} />
+                        <input type="text" value={username} onChange={this.handleUsernameInput} />
                     </div>
                     <div className="label">Password:</div>
                     <div className="field">
-                        <input type="password" value={password} onInput={this.handlePasswordInput} />
+                        <input type="password" value={password} onChange={this.handlePasswordInput} />
                     </div>
                     <div className="buttons">
                         <button type="button" onClick={this.handleCancelClick}>

@@ -6,6 +6,18 @@ BODY {
     font-family: sans-serif;
 }
 
+.logout {
+    float: right;
+}
+
+.error-boundary {
+    color: red;
+    font-size: 2em;
+    border: 1px double red;
+    text-align: center;
+    padding: 0.5em;
+}
+
 .todo-list {
 
 }

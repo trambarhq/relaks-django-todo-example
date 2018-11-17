@@ -1,8 +1,6 @@
-import { h, Component } from 'preact';
+import React, { PureComponent } from 'react';
 
-/** @jsx h */
-
-class TodoView extends Component {
+class TodoView extends PureComponent {
     static displayName = 'TodoView';
 
     constructor(props) {
