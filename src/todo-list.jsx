@@ -5,13 +5,6 @@ import TodoView from 'todo-view';
 class TodoList extends AsyncComponent {
     static displayName = 'TodoList';
 
-    /**
-     * Retrieve remote data and render the synchronize half of this component
-     *
-     * @param  {Meanwhile}  meanwhile
-     *
-     * @return {VNode}
-     */
     async renderAsync(meanwhile) {
         let { django } = this.props;
         let props = {
@@ -33,15 +26,10 @@ class TodoList extends AsyncComponent {
 class TodoListSync extends PureComponent {
     static displayName = 'TodoListSync';
 
-    /**
-     * Render the component, making best effort using what props are given
-     *
-     * @return {VNode}
-     */
     render() {
         let { todos, django } = this.props;
         if (!todos) {
-            return <h2>Loading...</h2>;
+            return <div>Loading...</div>;
         }
         return (
             <ul className="todo-list">

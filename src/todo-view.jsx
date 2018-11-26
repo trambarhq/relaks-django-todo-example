@@ -56,11 +56,11 @@ class TodoView extends PureComponent {
         return (
             <li className="todo-view expanded edit">
                 <div className="title">
-                    <input type="text" value={draft.title || ''} onInput={this.handleTitleInput} />
+                    <input type="text" value={draft.title || ''} onChange={this.handleTitleInput} />
                 </div>
                 <div className="extra">
                     <div className="description">
-                        <textarea value={draft.description || ''} onInput={this.handleDescriptionInput} />
+                        <textarea value={draft.description || ''} onChange={this.handleDescriptionInput} />
                     </div>
                     <div className="buttons">
                         <button onClick={this.handleSaveClick}>Save</button>

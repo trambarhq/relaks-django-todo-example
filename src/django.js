@@ -22,20 +22,20 @@ class Django {
         return this.dataSource.deleteOne(url, object);
     }
 
-    authenticate(credentials) {
+    logIn(credentials) {
         return this.dataSource.authenticate(loginURL, credentials);
+    }
+
+    logOut() {
+        return this.dataSource.revokeAuthorization(logoutURL);
+    }
+
+    loggedIn() {
+        return this.dataSource.isAuthorized();
     }
 
     authorize(token) {
         return this.dataSource.authorize(token);
-    }
-
-    cancelAuthentication() {
-        return this.dataSource.cancelAuthentication();
-    }
-
-    revokeAuthorization() {
-        return this.dataSource.revokeAuthorization(logoutURL);
     }
 }
 

@@ -90,24 +90,8 @@ BODY {
     }
 }
 
-.login-dialog {
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 10em;
+.login-form {
     max-width: 20em;
-    border: 1px solid #000000;
-    margin: auto;
-    padding: 0 0 4px 0;
-    box-shadow: 2px 2px 8px #000000;
-
-    .title {
-        font-size: 1.2em;
-        font-weight: bold;
-        padding: 6px 8px 6px 8px;
-        background-color: #000000;
-        color: #ffffff;
-    }
 
     .label {
         padding: 6px 8px 0 8px;
