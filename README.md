@@ -315,6 +315,8 @@ An extra item is rendered at the end for adding new TODO. Its `todo` prop will b
 
 ## Todo view
 
+`TodoView` ([todo-view.jsx](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/todo-view.jsx)) is a regular React component. It has three different appearances: (1) when it permits editing; (2) when it's showing a TODO; (3) when it's just a button for adding a new TODO.
+
 ```javascript
 render() {
     let { todo } = this.props;
@@ -329,6 +331,8 @@ render() {
 }
 ```
 
+The last case is the simplest:
+
 ```javascript
 renderAddButton() {
     return (
@@ -341,27 +345,31 @@ renderAddButton() {
 }
 ```
 
+When the user clicks it, we switch into edit mode:
+
 ```javascript
 handleAddClick = (evt) => {
-    let draft = {};
-    this.setState({ editing: true, draft });
+    this.setState({ editing: true, id: undefined, title: '', description: '' });
 }
 ```
 
+In edit mode, a text input and a text area, along with a couple buttons are rendered:
+
 ```javascript
 renderEditor() {
-    let { draft } = this.state;
+    let { title, description } = this.state;
+    let disabled = !title.trim() || !description.trim();
     return (
         <li className="todo-view expanded edit">
             <div className="title">
-                <input type="text" value={draft.title || ''} onChange={this.handleTitleChange} />
+                <input type="text" value={title} onChange={this.handleTitleChange} />
             </div>
             <div className="extra">
                 <div className="description">
-                    <textarea value={draft.description || ''} onChange={this.handleDescriptionChange} />
+                    <textarea value={description} onChange={this.handleDescriptionChange} />
                 </div>
                 <div className="buttons">
-                    <button onClick={this.handleSaveClick}>Save</button>
+                    <button onClick={this.handleSaveClick} disabled={disabled}>Save</button>
                     <button onClick={this.handleCancelClick}>Cancel</button>
                 </div>
             </div>
@@ -370,28 +378,31 @@ renderEditor() {
 }
 ```
 
+When the user makes changes, these handlers are called:
+
 ```javascript
 handleTitleChange = (evt) => {
-    let { draft } = this.state;
-    draft = Object.assign({}, draft, { title: evt.target.value });
-    this.setState({ draft });
+    this.setState({ title: evt.target.value });
 }
 
 handleDescriptionChange = (evt) => {
-    let { draft } = this.state;
-    draft = Object.assign({}, draft, { description: evt.target.value });
-    this.setState({ draft });
+    this.setState({ description: evt.target.value });
 }
 ```
+
+When he clicks the save button, we call `django.saveOne()` to save the item. Depending on whether `id` is defined, either an insert or an update operation is done. When that finishes, we exit edit mode.
 
 ```javascript
 handleSaveClick = async (evt) => {
     let { django } = this.props;
-    let { draft } = this.state;
-    await django.saveOne('/', draft);
+    let { id, title, description } = this.state;
+    let todo = { id, title, description };
+    await django.saveOne('/', todo);
     this.setState({ editing: false });
 }
 ```
+
+If he clicks the cancel button, we exit without saving:
 
 ```javascript
 handleCancelClick = (evt) => {
@@ -399,10 +410,13 @@ handleCancelClick = (evt) => {
 }
 ```
 
+In read-only mode, the only the title of the TODO is shown initially. The description is rendered into a div that's clipped off (using CSS), along with a couple buttons. These are shown when the user expands the item by clicking on the title.
+
 ```javascript
 renderView() {
     let { todo } = this.props;
     let { expanded } = this.state;
+    let { title, description } = todo;
     let className = 'todo-view';
     if (expanded) {
         className += ' expanded';
@@ -410,14 +424,10 @@ renderView() {
     return (
         <li className={className}>
             <div className="title">
-                <span onClick={this.handleTitleClick}>
-                    {todo.title}
-                </span>
+                <span onClick={this.handleTitleClick}>{title}</span>
             </div>
             <div className="extra">
-                <div className="description">
-                    {todo.description}
-                </div>
+                <div className="description">{description}</div>
                 <div className="buttons">
                     <button onClick={this.handleEditClick}>Edit</button>
                     <button onClick={this.handleDeleteClick}>Delete</button>
@@ -428,6 +438,8 @@ renderView() {
 }
 ```
 
+The click handler toggles `expanded` in `this.state`:
+
 ```javascript
 handleTitleClick = (evt) => {
     let { expanded } = this.state;
@@ -435,13 +447,17 @@ handleTitleClick = (evt) => {
 }
 ```
 
+When the user clicks the edit button, we enter exit mode, populating the state with the properties of the TODO in question:
+
 ```javascript
 handleEditClick = (evt) => {
     let { todo } = this.props;
-    let draft = Object.assign({}, todo);
-    this.setState({ editing: true, draft });
+    let { id, title, description } = todo;
+    this.setState({ editing: true, id, title, description });
 }
 ```
+
+If he clicks the delete button, we call `django.deleteOne()` to delete that item:
 
 ```javascript
 handleDeleteClick = async (evt) => {

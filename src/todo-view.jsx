@@ -8,7 +8,9 @@ class TodoView extends PureComponent {
         this.state = {
             expanded: false,
             editing: false,
-            draft: null,
+            id: undefined,
+            title: '',
+            description: '',
         };
     }
 
@@ -27,6 +29,7 @@ class TodoView extends PureComponent {
     renderView() {
         let { todo } = this.props;
         let { expanded } = this.state;
+        let { title, description } = todo;
         let className = 'todo-view';
         if (expanded) {
             className += ' expanded';
@@ -34,14 +37,10 @@ class TodoView extends PureComponent {
         return (
             <li className={className}>
                 <div className="title">
-                    <span onClick={this.handleTitleClick}>
-                        {todo.title}
-                    </span>
+                    <span onClick={this.handleTitleClick}>{title}</span>
                 </div>
                 <div className="extra">
-                    <div className="description">
-                        {todo.description}
-                    </div>
+                    <div className="description">{description}</div>
                     <div className="buttons">
                         <button onClick={this.handleEditClick}>Edit</button>
                         <button onClick={this.handleDeleteClick}>Delete</button>
@@ -52,9 +51,7 @@ class TodoView extends PureComponent {
     }
 
     renderEditor() {
-        let { draft } = this.state;
-        let title = draft.title || '';
-        let description = draft.description || '';
+        let { title, description } = this.state;
         let disabled = !title.trim() || !description.trim();
         return (
             <li className="todo-view expanded edit">
@@ -91,8 +88,8 @@ class TodoView extends PureComponent {
 
     handleEditClick = (evt) => {
         let { todo } = this.props;
-        let draft = Object.assign({}, todo);
-        this.setState({ editing: true, draft });
+        let { id, title, description } = todo;
+        this.setState({ editing: true, id, title, description });
     }
 
     handleDeleteClick = async (evt) => {
@@ -102,14 +99,14 @@ class TodoView extends PureComponent {
 
     handleSaveClick = async (evt) => {
         let { django } = this.props;
-        let { draft } = this.state;
-        await django.saveOne('/', draft);
+        let { id, title, description } = this.state;
+        let todo = { id, title, description };
+        await django.saveOne('/', todo);
         this.setState({ editing: false });
     }
 
     handleAddClick = (evt) => {
-        let draft = {};
-        this.setState({ editing: true, draft });
+        this.setState({ editing: true, id: undefined, title: '', description: '' });
     }
 
     handleCancelClick = (evt) => {
@@ -117,15 +114,11 @@ class TodoView extends PureComponent {
     }
 
     handleTitleChange = (evt) => {
-        let { draft } = this.state;
-        draft = Object.assign({}, draft, { title: evt.target.value });
-        this.setState({ draft });
+        this.setState({ title: evt.target.value });
     }
 
     handleDescriptionChange = (evt) => {
-        let { draft } = this.state;
-        draft = Object.assign({}, draft, { description: evt.target.value });
-        this.setState({ draft });
+        this.setState({ description: evt.target.value });
     }
 }
 
