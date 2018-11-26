@@ -19,9 +19,9 @@ class LogoutButton extends PureComponent {
         );
     }
 
-    handleClick = (evt) => {
+    handleClick = async (evt) => {
         let { django } = this.props;
-        django.logOut();
+        await django.logOut();
     }
 }
 

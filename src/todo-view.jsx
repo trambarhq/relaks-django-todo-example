@@ -53,17 +53,20 @@ class TodoView extends PureComponent {
 
     renderEditor() {
         let { draft } = this.state;
+        let title = draft.title || '';
+        let description = draft.description || '';
+        let disabled = !title.trim() || !description.trim();
         return (
             <li className="todo-view expanded edit">
                 <div className="title">
-                    <input type="text" value={draft.title || ''} onChange={this.handleTitleInput} />
+                    <input type="text" value={title} onChange={this.handleTitleChange} />
                 </div>
                 <div className="extra">
                     <div className="description">
-                        <textarea value={draft.description || ''} onChange={this.handleDescriptionInput} />
+                        <textarea value={description} onChange={this.handleDescriptionChange} />
                     </div>
                     <div className="buttons">
-                        <button onClick={this.handleSaveClick}>Save</button>
+                        <button onClick={this.handleSaveClick} disabled={disabled}>Save</button>
                         <button onClick={this.handleCancelClick}>Cancel</button>
                     </div>
                 </div>
@@ -92,17 +95,16 @@ class TodoView extends PureComponent {
         this.setState({ editing: true, draft });
     }
 
-    handleDeleteClick = (evt) => {
-        let { todo, django } = this.props;
-        django.deleteOne('/', todo);
+    handleDeleteClick = async (evt) => {
+        let { django, todo } = this.props;
+        await django.deleteOne('/', todo);
     }
 
-    handleSaveClick = (evt) => {
+    handleSaveClick = async (evt) => {
         let { django } = this.props;
         let { draft } = this.state;
-        django.saveOne('/', draft).then(() => {
-            this.setState({ editing: false });
-        });
+        await django.saveOne('/', draft);
+        this.setState({ editing: false });
     }
 
     handleAddClick = (evt) => {
@@ -114,13 +116,13 @@ class TodoView extends PureComponent {
         this.setState({ editing: false });
     }
 
-    handleTitleInput = (evt) => {
+    handleTitleChange = (evt) => {
         let { draft } = this.state;
         draft = Object.assign({}, draft, { title: evt.target.value });
         this.setState({ draft });
     }
 
-    handleDescriptionInput = (evt) => {
+    handleDescriptionChange = (evt) => {
         let { draft } = this.state;
         draft = Object.assign({}, draft, { description: evt.target.value });
         this.setState({ draft });

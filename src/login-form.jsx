@@ -52,17 +52,19 @@ class LoginForm extends PureComponent {
         this.setState({ password: evt.target.value });
     }
 
-    handleFormSubmit = (evt) => {
-        let { django } = this.props;
-        let { username, password } = this.state;
-        let credentials = { username, password };
-        if (username.indexOf('@') !== -1) {
-            credentials = { email: username, password };
-        }
-        django.logIn(credentials).catch((err) => {
-            this.setState({ error: err });
-        });
+    handleFormSubmit = async (evt) => {
         evt.preventDefault();
+        try {
+            let { django } = this.props;
+            let { username, password } = this.state;
+            let credentials = { username, password };
+            if (username.indexOf('@') !== -1) {
+                credentials = { email: username, password };
+            }
+            await django.logIn(credentials);
+        } catch (err) {
+            this.setState({ error: err });
+        }
     }
 }
 

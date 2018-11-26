@@ -7,7 +7,7 @@ function initialize(evt) {
     // create data source
     let dataSource = new DjangoDataSource({
         baseURL: 'http://127.0.0.1:8000/api/v1',
-        refreshInterval: 15000,
+        refreshInterval: 5000,
     });
     dataSource.activate();
 

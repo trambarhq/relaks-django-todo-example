@@ -16,7 +16,6 @@ class Application extends PureComponent {
         this.state = {
             django: new Django(dataSource),
             authenticating: false,
-            reusedToken: false,
         };
     }
 
@@ -56,13 +55,11 @@ class Application extends PureComponent {
         this.setState({ django: new Django(evt.target) });
     }
 
-    handleDataSourceAuthentication = (evt) => {
-        let { django, reusedToken } = this.state;
+    handleDataSourceAuthentication = async (evt) => {
+        let { django } = this.state;
         let token = sessionStorage.token;
-        if (token && !reusedToken) {
-            django.authorize(token);
-            this.setState({ reusedToken: true });
-        } else {
+        let success = await django.authorize(token);
+        if (!success) {
             delete sessionStorage.token;
             this.setState({ authenticating: true });
         }

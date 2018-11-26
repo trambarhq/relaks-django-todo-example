@@ -6,11 +6,11 @@ class Django {
         this.dataSource = dataSource;
     }
 
-    fetchList(url, options) {
+    async fetchList(url, options) {
         return this.dataSource.fetchList(url, options);
     }
 
-    saveOne(url, object) {
+    async saveOne(url, object) {
         if (object.id) {
             return this.dataSource.updateOne(url, object);
         } else {
@@ -18,15 +18,15 @@ class Django {
         }
     }
 
-    deleteOne(url, object) {
+    async deleteOne(url, object) {
         return this.dataSource.deleteOne(url, object);
     }
 
-    logIn(credentials) {
+    async logIn(credentials) {
         return this.dataSource.authenticate(loginURL, credentials);
     }
 
-    logOut() {
+    async logOut() {
         return this.dataSource.revokeAuthorization(logoutURL);
     }
 
@@ -34,7 +34,7 @@ class Django {
         return this.dataSource.isAuthorized();
     }
 
-    authorize(token) {
+    async authorize(token) {
         return this.dataSource.authorize(token);
     }
 }
