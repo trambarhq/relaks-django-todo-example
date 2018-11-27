@@ -1,9 +1,11 @@
-Relaks Django TODO Example
+Relaks Django Todo Example
 --------------------------
 
-This example demonstrates how to build an app that modifies a remote database using [Relaks](https://github.com/chung-leong/relaks) and [Relaks Django Data Source](https://github.com/chung-leong/relaks-django-data-source). It makes use of the Django backend in William S. Vincent's [tutorial on the Django REST framework](https://wsvincent.com/django-rest-framework-authentication-tutorial/). The database consists of a list of TODO items. We'll build a simple frontend that lets the user add new items and edit them.
+This example demonstrates how to build an app that modifies a remote database using [Relaks](https://github.com/chung-leong/relaks) and [Relaks Django Data Source](https://github.com/chung-leong/relaks-django-data-source). It makes use of the Django backend in William S. Vincent's [tutorial on the Django REST framework](https://wsvincent.com/django-rest-framework-authentication-tutorial/). The database consists of a list of todo items. We'll build a simple frontend that lets the user add new items and edit them.
 
 * [Getting started](#getting-started)
+* [Tripping an error boundary](#tripping-an-error-boundary)
+* [Enabling access control](#enabling-access-control)
 * [Bootstrap code](#boostrap-code)
 * [Application](#application)
 * [Data source proxy](#data-source-proxy)
@@ -11,15 +13,103 @@ This example demonstrates how to build an app that modifies a remote database us
 * [Logout button](#logout-button)
 * [Todo list](#todo-list)
 * [Todo view](#todo-view)
-* [Enabling access control](#enabling-access-control)
 
 ## Getting started
 
 First, set up Django and Django REST, following the detailed instructions at the [Mr. Vincent's post](https://wsvincent.com/django-rest-framework-authentication-tutorial/). Once you have Django up and running, clone this repository then run `npm install`. Once that's done, run `npm run start` to launch [WebPack Dev Server](https://webpack.js.org/configuration/dev-server/). Open a browser window and enter `http://localhost:8080` as the location.
 
+## Tripping an error boundary
+
+The first thing that you'll see is...uh, a big error message. If you open the development console, you'll see that we've run into a CORS violation. Django is listening at port 8000 while our app is at port 8080. That's not allowed unless the server sends special HTTP headers specifying that cross-origin-resource-sharing (CORS) is accessible. We can fix that easily. The little hiccup actually is a useful demonstration of Relaks's ability to work with error boundary.
+
+[Error boundary](https://reactjs.org/docs/error-boundaries.html) is a new feature in React 16. When an error occurs in a component's `render()` method, React can now handle it in a structured manner (instead of just blowing up). Relaks extends that to asynchronous errors (a.k.a. promise rejection) encountered in `renderAsync()`. As indicated by the console message, the error was caused by the component `TodoList` when it tries to fetch a list of todos from Django.
+
+## Enabling CORS
+
+To enable CORS access, we need to install the middleware [django-cors-headers](https://pypi.org/project/django-cors-headers/). First shutdown Django then run the following command at the command line:
+
+```sh
+pipenv install django-cors-headers
+```
+
+When that finishes, open `demo_project/settings.py` and add `corsheaders` to `INSTALLED_APPS` and `corsheaders.middleware.CorsMiddleware` to `MIDDLEWARE`:
+
+```python
+# demo_project/settings.py
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'corsheaders',  # new
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_auth',
+    'api',
+    'todos',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # new
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+```
+
+Then add the variable `CORS_ORIGIN_ALLOW_ALL` and set it to `True`:
+
+```
+CORS_ORIGIN_ALLOW_ALL = True  #new
+```
+
+Restart the server:
+
+```sh
+python manage.py runserver
+```
+
+Now when you refresh the example app, it should work properly...sort of. As configured, the server does not require authentication to make changes. That's not what we want.
+
+## Enabling access control
+
+Open `demo_project/settings.py` again and change this:
+
+```python
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny'
+    ],
+}
+```
+
+to this:
+
+```python
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+       'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+```
+
+You can make the changes Django is still running. They'll be applied as soon as you save the file. A login screen should now appear in our example app.
+
+Phew! Now that we've got everything up and working, let's take a look at the code.
+
 ## Bootstrap code
 
-The [bootstrap code](https://github.com/chung-leong/relaks#bootstrapping) for this example is fairly simple:
+The bootstrap code ([main.js](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/main.js)) for this example is fairly simple:
 
 ```javascript
 function initialize(evt) {
@@ -39,11 +129,13 @@ function initialize(evt) {
 }
 ```
 
-Basically, we create the data source (the Django adapter) and hands it to `Application`. The refresh interval interval is set to a rather extreme 5 seconds, so that we would quickly see changes made through Django admin tool. A real-world app would not query the server that frequently.
+Basically, we create the data source (the Django adapter) and hands it to `Application`. The refresh interval interval is set to a rather extreme 5 seconds. This is so that we would quickly see changes made through the Django admin tool. You can try it by logging into the admin tool at `http://127.0.0.1:8000/admin/` and manually adding a todo item. It should after a few seconds. You can also try running multiple instances of the example app in different browser windows.
+
+In an real-world app, something like 5 minutes might be more appropriate.
 
 ## Application
 
-`Application` ([application.jsx](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/application.jsx)) is our root React component. Its `render()` method will print a login form when authentication is required and the list of TODO's otherwise:
+`Application` ([application.jsx](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/application.jsx)) is our root React component. Its `render()` method will print a login form when authentication is required and the list of todos otherwise:
 
 ```javascript
 render() {
@@ -71,7 +163,7 @@ render() {
 }
 ```
 
-[Error boundary](https://reactjs.org/docs/error-boundaries.html) is a new feature in React 16. It makes it a lot easier to track errors during development. We're placing boundary around our UI components so that any error encountered during rendering would appear on the page.
+We're placing boundary around our UI components so that any error encountered during rendering would appear on the page.
 
 In `componentDidMount()` we attach event listeners to the data source that was sent as a prop:
 
@@ -286,7 +378,7 @@ The options given to `fetchList()` are [hooks](https://github.com/chung-leong/re
 
 The call to `more()` would trigger retrieval of additional pages when pagination is used. It doesn't do anything at this time.
 
-The `render()` method of `TodoListSync` takes the list of TODO's given to it and renders a `TodoView` component for each:
+The `render()` method of `TodoListSync` takes the list of todos given to it and renders a `TodoView` component for each:
 
 ```javascript
 render() {
@@ -311,11 +403,11 @@ render() {
 }
 ```
 
-An extra item is rendered at the end for adding new TODO. Its `todo` prop will be `undefined`.
+An extra item is rendered at the end for adding new todo. Its `todo` prop will be `undefined`.
 
 ## Todo view
 
-`TodoView` ([todo-view.jsx](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/todo-view.jsx)) is a regular React component. It has three different appearances: (1) when it permits editing; (2) when it's showing a TODO; (3) when it's just a button for adding a new TODO.
+`TodoView` ([todo-view.jsx](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/todo-view.jsx)) is a regular React component. It has three different appearances: (1) when it permits editing; (2) when it's showing a todo; (3) when it's just a button for adding a new todo.
 
 ```javascript
 render() {
@@ -410,7 +502,7 @@ handleCancelClick = (evt) => {
 }
 ```
 
-In read-only mode, the only the title of the TODO is shown initially. The description is rendered into a div that's clipped off (using CSS), along with a couple buttons. These are shown when the user expands the item by clicking on the title.
+In read-only mode, the only the title of the todo is shown initially. The description is rendered into a div that's clipped off (using CSS), along with a couple buttons. These are shown when the user expands the item by clicking on the title.
 
 ```javascript
 renderView() {
@@ -447,7 +539,7 @@ handleTitleClick = (evt) => {
 }
 ```
 
-When the user clicks the edit button, we enter exit mode, populating the state with the properties of the TODO in question:
+When the user clicks the edit button, we enter edit mode, populating the state with the properties of the todo in question:
 
 ```javascript
 handleEditClick = (evt) => {
@@ -463,30 +555,5 @@ If he clicks the delete button, we call `django.deleteOne()` to delete that item
 handleDeleteClick = async (evt) => {
     let { django, todo } = this.props;
     await django.deleteOne('/', todo);
-}
-```
-
-## Enabling access control
-
-```python
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-       'rest_framework.authentication.TokenAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny'
-    ],
-}
-
-```
-
-```python
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-       'rest_framework.authentication.TokenAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
 }
 ```
