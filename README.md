@@ -13,6 +13,8 @@ This example demonstrates how to build an app that modifies a remote database us
 * [Logout button](#logout-button)
 * [Todo list](#todo-list)
 * [Todo view](#todo-view)
+* [Update cycle](#update-cycle)
+* [Final word](#final-word)
 
 ## Getting started
 
@@ -20,13 +22,13 @@ First, set up Django and Django REST, following the detailed instructions at the
 
 ## Tripping an error boundary
 
-The first thing that you'll see is...uh, a big error message. If you open the development console, you'll see that we've run into a CORS violation. Django is listening at port 8000 while our app is at port 8080. That's not allowed unless the server sends special HTTP headers specifying that cross-origin-resource-sharing (CORS) is accessible. We can fix that easily. The little hiccup actually is a useful demonstration of Relaks's ability to work with error boundary.
+The first thing that you'll see is...uh, a big error message. We've run into a CORS violation. Django is listening at port 8000 while our app is at port 8080. The difference in port number means the server must send HTTP headers specifically granting cross-origin access. We can fix that easily. The little hiccup actually is a useful demonstration of Relaks's ability to work with error boundary.
 
-[Error boundary](https://reactjs.org/docs/error-boundaries.html) is a new feature in React 16. When an error occurs in a component's `render()` method, React can now handle it in a structured manner (instead of just blowing up). Relaks extends that to asynchronous errors (a.k.a. promise rejection) encountered in `renderAsync()`. As indicated by the console message, the error was caused by the component `TodoList` when it tries to fetch a list of todos from Django.
+[Error boundary](https://reactjs.org/docs/error-boundaries.html) is a new feature in React 16. When an error occurs in a component's `render()` method, React can now handle it in a structured manner (instead of just blowing up). Relaks extends that to asynchronous errors (a.k.a. promise rejection) encountered in `renderAsync()`. As indicated by the console message, the error was caused by the component `TodoList`, when it tries to fetch a list of todos from Django.
 
 ## Enabling CORS
 
-To enable CORS access, we need to install the middleware [django-cors-headers](https://pypi.org/project/django-cors-headers/). First shutdown Django then run the following command at the command line:
+To enable CORS, we need to install the middleware [django-cors-headers](https://pypi.org/project/django-cors-headers/). First shutdown Django then run the following command at the command prompt:
 
 ```sh
 pipenv install django-cors-headers
@@ -129,9 +131,9 @@ function initialize(evt) {
 }
 ```
 
-Basically, we create the data source (the Django adapter) and hands it to `Application`. The refresh interval interval is set to a rather extreme 5 seconds. This is so that we would quickly see changes made through the Django admin tool. You can try it by logging into the admin tool at `http://127.0.0.1:8000/admin/` and manually adding a todo item. It should after a few seconds. You can also try running multiple instances of the example app in different browser windows.
+Basically, we create the data source (the Django adapter) and hands it to `Application`. The refresh interval is set to a rather extreme 5 seconds. This is so that we would quickly see changes made through the Django admin tool. You can try it by logging into the admin tool at `http://127.0.0.1:8000/admin/` and manually adding a todo item. It should appear in our app after a few seconds. You can also try running multiple instances of the example app in different browser windows.
 
-In an real-world app, something like 5 minutes might be more appropriate.
+In an real-world app, something like 5 minutes would be more appropriate.
 
 ## Application
 
@@ -163,9 +165,11 @@ render() {
 }
 ```
 
-We're placing boundary around our UI components so that any error encountered during rendering would appear on the page.
+Note how each UI component receives `django` as a prop.
 
-In `componentDidMount()` we attach event listeners to the data source that was sent as a prop:
+We're placing boundary around our UI components so that any error encountered during rendering would appear on the page. That's what we saw earlier.
+
+In `componentDidMount()` we attach event listeners to the data source:
 
 ```javascript
 componentDidMount() {
@@ -177,7 +181,7 @@ componentDidMount() {
 }
 ```
 
-When a `change` event occurs, we recreate the data source's [proxy object](https://github.com/chung-leong/relaks#proxy-objects) to force rendering:
+When a `change` event occurs, we recreate the data source's [proxy object](https://github.com/chung-leong/relaks#proxy-objects) to force rerendering:
 
 ```javascript
 handleDataSourceChange = (evt) => {
@@ -354,7 +358,7 @@ handleClick = async (evt) => {
 
 ## Todo list
 
-`TodoList` ([todo-list.jsx](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/todo-list.jsx)) is a Relaks `AsyncComponent`. Its job is to fetch the necessary data from the remote database and pass it to its synchronous half. Doing so involves just a single asynchronous method call:
+`TodoList` ([todo-list.jsx](https://github.com/chung-leong/relaks-django-todo-example/blob/master/src/todo-list.jsx)) is a Relaks `AsyncComponent`. Its job is to fetch data from the remote database and pass it to its synchronous half. Doing so involves just a single asynchronous method call:
 
 ```javascript
 async renderAsync(meanwhile) {
@@ -374,7 +378,7 @@ async renderAsync(meanwhile) {
 }
 ```
 
-The options given to `fetchList()` are [hooks](https://github.com/chung-leong/relaks-django-data-source#hooks) that control how cached results are updated after a write operation. When an object is inserted into a table, by default the data source would choose to rerun a query because it does not know whether the new object meets the query's criteria. Here, we're fetching all objects in the order they were created. We know a newly created object has to show up at the end of the list. We can therefore save a trip to the server by telling the data source to simply push the object into the array. An update to an object can likewise be handled by replacing the old one.
+The options given to `fetchList()` are [hooks](https://github.com/chung-leong/relaks-django-data-source#hooks) that update cached results after a write operation. When an object is inserted into a table, by default the data source would choose to rerun a query because it does not know whether the new object meets the query's criteria. Here, we're fetching all objects in the order they were created. We know a newly created object has to show up at the end of the list. We can therefore save a trip to the server by telling the data source to simply push the object into the array. An update to an object can likewise be handled by replacing the old one.
 
 The call to `more()` would trigger retrieval of additional pages when pagination is used. It doesn't do anything at this time.
 
@@ -445,7 +449,7 @@ handleAddClick = (evt) => {
 }
 ```
 
-In edit mode, a text input and a text area, along with a couple buttons are rendered:
+In edit mode, a text input and a text area, along with a couple buttons, are rendered:
 
 ```javascript
 renderEditor() {
@@ -482,7 +486,7 @@ handleDescriptionChange = (evt) => {
 }
 ```
 
-When he clicks the save button, we call `django.saveOne()` to save the item. Depending on whether `id` is defined, either an insert or an update operation is done. When that finishes, we exit edit mode.
+When he clicks the save button, we call `django.saveOne()` to save the item. Depending on whether `id` is defined, either an insert or an update operation will be performed. When that finishes, we exit edit mode.
 
 ```javascript
 handleSaveClick = async (evt) => {
@@ -557,3 +561,41 @@ handleDeleteClick = async (evt) => {
     await django.deleteOne('/', todo);
 }
 ```
+
+## Update cycle
+
+Let us examine step-by-step the creation process of a todo so you have clearer understanding of what actually happens.
+
+1. `handleSaveClick()` calls `saveOne()` with the new todo.
+2. The object is sent to the server using the HTTP POST method.
+3. The server responds with a copy of the object, which now has a database id.
+4. The data source runs the `afterInsert` hooks of all impacted queries.
+5. The `push` handler places the new object at the end our `fetchList()` query's cached results.
+6. The data source emits a `change` event.
+7. `handleDataSourceChange()` creates a new `Django` object and calls `setState()`.
+8. `Application` rerenders.
+9. `renderAsync()` of `TodoList` is called, which in turns calls `fetchList()`.
+10. `fetchList()` immediately returns the modified cached results.
+11. `TodoListAsync` rerenders the list of todos, with the new one added.
+
+If we hadn't specified `push` as the `afterInsert` hook, the sequence of event would be different starting at step 5:
+
+5. The default `refresh` handler marks the `fetchList()` query as out-of-date.
+6. The data source emits a `change` event.
+7. `handleDataSourceChange()` creates a new `Django` object and calls `setState()`.
+8. `Application` rerenders.
+9. `renderAsync()` of `TodoList` is called, which in turns calls `fetchList()`.
+10. `fetchList()` immediately returns the old cached results and initiates a rerunning of the query.
+11. `TodoListAsync` rerenders the old list of todos.
+12. The data source receives the query's results after some time.
+13. It notices that the list is different and emits a `change` event.
+14. `handleDataSourceChange()` creates a new `Django` object again and calls `setState()`.
+15. `Application` rerenders.
+16. `fetchList()` immediately returns the new results.
+17. `TodoListAsync` rerenders the list of todos, with the new one added.
+
+The default behavior still yields the correct end result, but will seem less smooth as the new object would not appear until the full list is fetched once again.
+
+## Final words
+
+That's it! I hope you were able to follow the example without difficulty.
