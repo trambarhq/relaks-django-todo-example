@@ -10,11 +10,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:chung-leong/relaks-django-todo-example.git"
+    "url": "git@github.com:trambarhq/relaks-django-todo-example.git"
   },
   "author": "Chung Leong",
   "license": "MIT",
-  "homepage": "https://github.com/chung-leong/relaks-django-todo-example",
+  "homepage": "https://github.com/trambarhq/relaks-django-todo-example",
   "devDependencies": {
     "babel-core": "^6.24.1",
     "babel-loader": "^7.0.0",
