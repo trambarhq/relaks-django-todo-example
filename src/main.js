@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { render } from 'react-dom';
-import { Application } from 'application';
+import { FrontEnd } from 'front-end';
 import DjangoDataSource from 'relaks-django-data-source';
 
 function initialize(evt) {
@@ -11,12 +11,9 @@ function initialize(evt) {
     });
     dataSource.activate();
 
-    let appContainer = document.getElementById('app-container');
-    if (!appContainer) {
-        throw new Error('Unable to find app element in DOM');
-    }
-    let appElement = createElement(Application, { dataSource });
-    render(appElement, appContainer);
+    let container = document.getElementById('react-container');
+    let element = createElement(FrontEnd, { dataSource });
+    render(element, container);
 }
 
 window.addEventListener('load', initialize);

@@ -7,8 +7,8 @@ import ErrorBoundary from 'error-boundary';
 
 import 'style.scss';
 
-class Application extends PureComponent {
-    static displayName = 'Application';
+class FrontEnd extends PureComponent {
+    static displayName = 'FrontEnd';
 
     constructor(props) {
         super(props);
@@ -78,6 +78,6 @@ class Application extends PureComponent {
 }
 
 export {
-    Application as default,
-    Application
+    FrontEnd as default,
+    FrontEnd
 };
