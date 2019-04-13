@@ -1,8 +1,6 @@
 import React, { Component } from 'react';
 
 class ErrorBoundary extends Component {
-    static displayName = 'ErrorBoundary';
-
     constructor(props) {
         super(props);
         this.state = { error: null };
@@ -24,6 +22,5 @@ class ErrorBoundary extends Component {
 }
 
 export {
-    ErrorBoundary as default,
     ErrorBoundary,
 };

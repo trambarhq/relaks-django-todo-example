@@ -1,34 +1,53 @@
-import React, { PureComponent } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useSaveBuffer } from 'relaks';
 
-class TodoView extends PureComponent {
-    static displayName = 'TodoView';
+function TodoView(props) {
+    const { django, todo } = props;
+    const [ expanded, setExpanded ] = useState(false);
+    const [ editing, setEditing ] = useState(false);
+    const [ id, setID ] = useState();
+    const draft = useSaveBuffer({
+        original: todo,
+        save: (base, ours) => {
+            django.saveOne('/', ours);
+        },
+    });
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            expanded: false,
-            editing: false,
-            id: undefined,
-            title: '',
-            description: '',
-        };
+    const handleTitleClick = useCallback((evt) => {
+        setExpanded(!expanded);
+    }, [ expanded ]);
+    const handleEditClick = useCallback((evt) => {
+        setEditing(true);
+    });
+    const handleDeleteClick = useCallback(async (evt) => {
+        await django.deleteOne('/', todo);
+    }, [ django, todo ]);
+    const handleSaveClick = useCallback(async (evt) => {
+        await draft.save();
+        setEditing(false);
+    });
+    const handleAddClick = useCallback((evt) => {
+        setEditing(true);
+    });
+    const handleCancelClick = useCallback((evt) => {
+        setEditing(false);
+    });
+    const handleTitleChange = useCallback((evt) => {
+        draft.assign({ title: evt.target.value });
+    });
+    const handleDescriptionChange = useCallback((evt) => {
+        draft.assign({ description: evt.target.value });
+    });
+
+    if (editing) {
+        return renderEditor();
+    } else if (todo) {
+        return renderView();
+    } else {
+        return renderAddButton();
     }
 
-    render() {
-        let { todo } = this.props;
-        let { editing } = this.state;
-        if (editing) {
-            return this.renderEditor();
-        } else if (todo) {
-            return this.renderView();
-        } else {
-            return this.renderAddButton();
-        }
-    }
-
-    renderView() {
-        let { todo } = this.props;
-        let { expanded } = this.state;
+    function renderView() {
         let { title, description } = todo;
         let className = 'todo-view';
         if (expanded) {
@@ -37,92 +56,51 @@ class TodoView extends PureComponent {
         return (
             <li className={className}>
                 <div className="title">
-                    <span onClick={this.handleTitleClick}>{title}</span>
+                    <span onClick={handleTitleClick}>{title}</span>
                 </div>
                 <div className="extra">
                     <div className="description">{description}</div>
                     <div className="buttons">
-                        <button onClick={this.handleEditClick}>Edit</button>
-                        <button onClick={this.handleDeleteClick}>Delete</button>
+                        <button onClick={handleEditClick}>Edit</button>
+                        <button onClick={handleDeleteClick}>Delete</button>
                     </div>
                 </div>
             </li>
         );
     }
 
-    renderEditor() {
-        let { title, description } = this.state;
+    function renderEditor() {
+        let { title, description } = draft.current;
         let disabled = !title.trim() || !description.trim();
         return (
             <li className="todo-view expanded edit">
                 <div className="title">
-                    <input type="text" value={title} onChange={this.handleTitleChange} />
+                    <input type="text" value={title} onChange={handleTitleChange} />
                 </div>
                 <div className="extra">
                     <div className="description">
-                        <textarea value={description} onChange={this.handleDescriptionChange} />
+                        <textarea value={description} onChange={handleDescriptionChange} />
                     </div>
                     <div className="buttons">
-                        <button onClick={this.handleSaveClick} disabled={disabled}>Save</button>
-                        <button onClick={this.handleCancelClick}>Cancel</button>
+                        <button onClick={handleSaveClick} disabled={disabled}>Save</button>
+                        <button onClick={handleCancelClick}>Cancel</button>
                     </div>
                 </div>
             </li>
         );
     }
 
-    renderAddButton() {
+    function renderAddButton() {
         return (
             <li className="todo-view add">
-                <span className="add-button" onClick={this.handleAddClick}>
+                <span className="add-button" onClick={handleAddClick}>
                     Add new item
                 </span>
             </li>
         );
     }
-
-    handleTitleClick = (evt) => {
-        let { expanded } = this.state;
-        this.setState({ expanded: !expanded });
-    }
-
-    handleEditClick = (evt) => {
-        let { todo } = this.props;
-        let { id, title, description } = todo;
-        this.setState({ editing: true, id, title, description });
-    }
-
-    handleDeleteClick = async (evt) => {
-        let { django, todo } = this.props;
-        await django.deleteOne('/', todo);
-    }
-
-    handleSaveClick = async (evt) => {
-        let { django } = this.props;
-        let { id, title, description } = this.state;
-        let todo = { id, title, description };
-        await django.saveOne('/', todo);
-        this.setState({ editing: false });
-    }
-
-    handleAddClick = (evt) => {
-        this.setState({ editing: true, id: undefined, title: '', description: '' });
-    }
-
-    handleCancelClick = (evt) => {
-        this.setState({ editing: false });
-    }
-
-    handleTitleChange = (evt) => {
-        this.setState({ title: evt.target.value });
-    }
-
-    handleDescriptionChange = (evt) => {
-        this.setState({ description: evt.target.value });
-    }
 }
 
 export {
-    TodoView as default,
     TodoView,
 };

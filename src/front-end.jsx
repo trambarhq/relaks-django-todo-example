@@ -1,83 +1,77 @@
-import React, { PureComponent } from 'react';
-import Django from 'django';
-import LoginForm from 'login-form';
-import LogoutButton from 'logout-button';
-import TodoList from 'todo-list';
-import ErrorBoundary from 'error-boundary';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useEventTime } from 'relaks';
+import { Django } from 'django';
+import { LoginForm } from 'login-form';
+import { LogoutButton } from 'logout-button';
+import { TodoList } from 'todo-list';
+import { ErrorBoundary } from 'error-boundary';
 
 import 'style.scss';
 
-class FrontEnd extends PureComponent {
-    static displayName = 'FrontEnd';
-
-    constructor(props) {
-        super(props);
-        let { dataSource } = this.props;
-        this.state = {
-            django: new Django(dataSource),
-            authenticating: false,
-        };
+function FrontEnd(props) {
+    const { dataSource } = props;
+    const [ dataChanged, setDataChanged ] = useEventTime();
+    const [ authenticating, setAuthenticating ] = useState(false);
+    const django = useMemo(() => {
+        return new Django(dataSource);
+    }, [ dataSource, dataChanged ])
+    if (dataChanged) {
+        console.log(dataChanged.toISOString());
     }
 
-    render() {
-        let { django, authenticating } = this.state;
-        if (authenticating) {
-            return (
-                <div>
-                    <ErrorBoundary>
-                        <h1>Log in</h1>
-                        <LoginForm django={django} />
-                    </ErrorBoundary>
-                </div>
-            );
-        } else {
-            return (
-                <div>
-                    <ErrorBoundary>
-                        <LogoutButton django={django} />
-                        <h1>To-Do list</h1>
-                        <TodoList django={django} />
-                    </ErrorBoundary>
-                </div>
-            );
-        }
-    }
-
-    componentDidMount() {
-        let { dataSource } = this.props;
-        dataSource.addEventListener('change', this.handleDataSourceChange);
-        dataSource.addEventListener('authentication', this.handleDataSourceAuthentication);
-        dataSource.addEventListener('authorization', this.handleDataSourceAuthorization);
-        dataSource.addEventListener('deauthorization', this.handleDataSourceDeauthorization);
-    }
-
-    handleDataSourceChange = (evt) => {
-        this.setState({ django: new Django(evt.target) });
-    }
-
-    handleDataSourceAuthentication = async (evt) => {
-        let { django } = this.state;
+    const handleDataSourceAuthentication = useCallback(async (evt) => {
         let token = sessionStorage.token;
         let success = await django.authorize(token);
         if (!success) {
             delete sessionStorage.token;
-            this.setState({ authenticating: true });
+            setAuthenticating(true);
         }
-    }
-
-    handleDataSourceAuthorization = (evt) => {
+    });
+    const handleDataSourceAuthorization = useCallback((evt) => {
         if (evt.fresh) {
             sessionStorage.token = evt.token;
-            this.setState({ authenticating: false });
+            setAuthenticating(false);
         }
-    }
-
-    handleDataSourceDeauthorization = (evt) => {
+    });
+    const handleDataSourceDeauthorization = useCallback((evt) => {
         delete sessionStorage.token;
+    });
+
+    useEffect(() => {
+        dataSource.addEventListener('change', setDataChanged);
+        dataSource.addEventListener('authentication', handleDataSourceAuthentication);
+        dataSource.addEventListener('authorization', handleDataSourceAuthorization);
+        dataSource.addEventListener('deauthorization', handleDataSourceDeauthorization);
+        return () => {
+            dataSource.removeEventListener('change', setDataChanged);
+            dataSource.removeEventListener('authentication', handleDataSourceAuthentication);
+            dataSource.removeEventListener('authorization', handleDataSourceAuthorization);
+            dataSource.removeEventListener('deauthorization', handleDataSourceDeauthorization);
+        };
+    }, [ dataSource ])
+
+    if (authenticating) {
+        return (
+            <div>
+                <ErrorBoundary>
+                    <h1>Log in</h1>
+                    <LoginForm django={django} />
+                </ErrorBoundary>
+            </div>
+        );
+    } else {
+        return (
+            <div>
+                <ErrorBoundary>
+                    <LogoutButton django={django} />
+                    <h1>To-Do list</h1>
+                    <TodoList django={django} />
+                </ErrorBoundary>
+            </div>
+        );
     }
 }
 
 export {
-    FrontEnd as default,
     FrontEnd
 };

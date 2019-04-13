@@ -3,6 +3,8 @@ import { render } from 'react-dom';
 import { FrontEnd } from 'front-end';
 import DjangoDataSource from 'relaks-django-data-source';
 
+window.addEventListener('load', initialize);
+
 function initialize(evt) {
     // create data source
     let dataSource = new DjangoDataSource({
@@ -15,5 +17,3 @@ function initialize(evt) {
     let element = createElement(FrontEnd, { dataSource });
     render(element, container);
 }
-
-window.addEventListener('load', initialize);

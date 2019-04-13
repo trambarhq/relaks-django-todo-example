@@ -1,55 +1,42 @@
-import React, { PureComponent } from 'react';
-import { AsyncComponent } from 'relaks';
-import TodoView from 'todo-view';
+import React from 'react';
+import Relaks, { useProgress } from 'relaks';
+import { TodoView } from 'todo-view';
 
-class TodoList extends AsyncComponent {
-    static displayName = 'TodoList';
+async function TodoList(props) {
+    const { django } = props;
+    const [ show ] = useProgress();
 
-    async renderAsync(meanwhile) {
-        let { django } = this.props;
-        let props = {
-            todos: null,
-            django
-        };
-        meanwhile.show(<TodoListSync {...props} />);
-        let options = {
-            afterInsert: 'push',
-            afterUpdate: 'replace',
-            afterDelete: 'remove',
-        };
-        props.todos = await django.fetchList('/', options);
-        props.todos.more();
-        return <TodoListSync {...props} />;
-    }
-}
+    render();
+    const options = {
+        afterInsert: 'push',
+        afterUpdate: 'replace',
+        afterDelete: 'remove',
+    };
+    const todos = await django.fetchList('/', options);
+    render();
 
-class TodoListSync extends PureComponent {
-    static displayName = 'TodoListSync';
+    todos.more();
 
-    render() {
-        let { todos, django } = this.props;
+    function render() {
         if (!todos) {
-            return <div>Loading...</div>;
+            show(<div>Loading...</div>);
+        } else {
+            show(
+                <ul className="todo-list">
+                    {todos.map(renderTodo)}
+                    <TodoView key={0} django={django} />
+                </ul>
+            );
         }
-        return (
-            <ul className="todo-list">
-            {
-                todos.map((todo) => {
-                    let viewProps = {
-                        todo,
-                        django,
-                    };
-                    return <TodoView key={todo.id} {...viewProps} />;
-                })
-            }
-            <TodoView key={0} django={django} />
-            </ul>
-        );
+    }
+
+    function renderTodo(todo) {
+        return <TodoView key={todo.id} django={django} todo={todo} />;
     }
 }
+
+const component = Relaks.memo(TodoList);
 
 export {
-    TodoList as default,
-    TodoList,
-    TodoListSync
+    component as TodoList,
 };

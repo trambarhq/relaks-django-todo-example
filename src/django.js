@@ -40,6 +40,5 @@ class Django {
 }
 
 export {
-    Django as default,
     Django,
 };

@@ -1,31 +1,22 @@
-import React, { PureComponent } from 'react';
+import React, { useCallback } from 'react';
 
-class LogoutButton extends PureComponent {
-    static displayName = 'LogoutButton';
+function LogoutButton(props) {
+    const { django } = props;
 
-    constructor(props) {
-        super(props);
-    }
-
-    render() {
-        let { django } = this.props;
-        if (!django.loggedIn()) {
-            return null;
-        }
-        return (
-            <button className="logout" onClick={this.handleClick}>
-                Log out
-            </button>
-        );
-    }
-
-    handleClick = async (evt) => {
-        let { django } = this.props;
+    const handleClick = useCallback(async (evt) => {
         await django.logOut();
+    }, [ django ]);
+
+    if (!django.loggedIn()) {
+        return null;
     }
+    return (
+        <button className="logout" onClick={handleClick}>
+            Log out
+        </button>
+    );
 }
 
 export {
-    LogoutButton as default,
     LogoutButton,
 };
