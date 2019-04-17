@@ -2,6 +2,7 @@ import _ from 'lodash';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useSaveBuffer, useStickySelection } from 'relaks';
 import { mergeObjects } from 'merge-utils';
+import { preserveObject, restoreObject } from 'storage-utils';
 
 function TodoView(props) {
     const { django, todo } = props;
@@ -16,24 +17,10 @@ function TodoView(props) {
             return django.deleteOne('/', todo);
         },
         preserve: (base, ours) => {
-            if (ours) {
-                const date = (new Date).toISOString();
-                const json = JSON.stringify({ object: ours, date});
-                localStorage.draft = json;
-            } else {
-                delete localStorage.draft;
-            }
+            preserveObject('draft', ours);
         },
         restore: (base) => {
-            const json = localStorage.draft;
-            if (json) {
-                const { date, object } = JSON.parse(json);
-                if (object.id === base.id) {
-                    if ((new Date - new Date(date)) < 3600000) {
-                        return object;
-                    }
-                }
-            }
+            return restoreObject('draft', base);
         },
     });
     const [ expanded, setExpanded ] = useState(draft.changed);
