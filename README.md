@@ -1,17 +1,23 @@
 Relaks Django Todo Example
 --------------------------
 
-This example demonstrates how to build an front-end that modifies a remote database using [Relaks](https://github.com/trambarhq/relaks) and [Relaks Django Data Source](https://github.com/trambarhq/relaks-django-data-source). It makes use of the Django backend in William S. Vincent's [tutorial on the Django REST framework](https://wsvincent.com/django-rest-framework-authentication-tutorial/). The database consists of a list of todo items. We'll build a simple frontend that lets the user add new items and edit them.
+This example demonstrates how to modify a remote database using [Relaks](https://github.com/trambarhq/relaks) and [Relaks Django Data Source](https://github.com/trambarhq/relaks-django-data-source). It makes use of the Django back-end from William S. Vincent's [tutorial on the Django REST framework](https://wsvincent.com/django-rest-framework-authentication-tutorial/). The database consists of a list of todo items. We'll build a simple front-end that lets the user add new items and edit them.
 
 ## Getting started
 
-First, set up Django and Django REST, following the detailed instructions at the [Mr. Vincent's post](https://wsvincent.com/django-rest-framework-authentication-tutorial/). Once you have Django up and running, clone this repository then run `npm install`. Once that's done, run `npm run start` to launch [WebPack Dev Server](https://webpack.js.org/configuration/dev-server/). Open a browser window and enter `http://localhost:8080` as the location.
+First, set up Django and Django REST, following the detailed instructions at the [Mr. Vincent's post](https://wsvincent.com/django-rest-framework-authentication-tutorial/). Once you have Django up and running, clone this repository then run `npm install`. When that's done, run `npm run dev` to launch [WebPack Dev Server](https://webpack.js.org/configuration/dev-server/). Open a browser window and enter `http://localhost:8080` as the location.
 
 ## Tripping an error boundary
 
-The first thing that you'll see is...uh, a big error message. We've run into a CORS violation. Django is listening at port 8000 while our front-end is server from port 8080. The difference in port number means the server must send HTTP headers specifically granting cross-origin access. We can fix that easily. The little hiccup actually is a useful demonstration of Relaks's ability to work with error boundary.
+The first thing that you'll see is...uh, a big error message:
 
-[Error boundary](https://reactjs.org/docs/error-boundaries.html) is a new feature in React 16. When an error occurs in a component's `render()` method, React can now handle it in a structured manner (instead of just blowing up). Relaks extends that to asynchronous errors (a.k.a. promise rejection) encountered in `renderAsync()`. As indicated by the console message, the error was caused by the component `TodoList`, when it tries to fetch a list of todos from Django.
+![Failed to fetch](docs/img/failed-to-fetch.png)
+
+![CORS violation](docs/img/cors-error.png)
+
+We've run into a CORS violation. Django is listening at port 8000 while our front-end is served from port 8080. The difference in port number means the server must send HTTP headers specifically granting cross-origin access. We can fix that easily. The little hiccup actually is a useful demonstration of Relaks's ability to work with error boundary.
+
+[Error boundary](https://reactjs.org/docs/error-boundaries.html) is a new feature in React 16. When an error occurs in a component's `render()` method, React can now handle it in a structured manner (instead of just blowing up). Relaks extends that to errors in asynchronous code. As indicated by the console message, the error was caused by the component `TodoList`, when it tries to fetch a list of todos from Django.
 
 ## Enabling CORS
 
@@ -35,8 +41,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',  # new
     'rest_framework',
-    'rest_framework.authtoken',
-    'rest_auth',
     'api',
     'todos',
 ]
@@ -55,8 +59,8 @@ MIDDLEWARE = [
 
 Then add the variable `CORS_ORIGIN_ALLOW_ALL` and set it to `True`:
 
-```
-CORS_ORIGIN_ALLOW_ALL = True  #new
+```python
+CORS_ORIGIN_ALLOW_ALL = True  # new
 ```
 
 Restart the server:
@@ -69,7 +73,28 @@ Now when you refresh the web page, it should work properly...sort of. As configu
 
 ## Enabling access control
 
-Open `demo_project/settings.py` again and change this:
+Open `demo_project/settings.py` again. Add `rest_framework.authtoken` and `rest_auth` to `INSTALLED_APPS`:
+
+```python
+# demo_project/settings.py
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',  # new
+    'rest_auth',  # new
+    'api',
+    'todos',
+]
+```
+
+And change this:
 
 ```python
 REST_FRAMEWORK = {
@@ -110,14 +135,14 @@ window.addEventListener('load', initialize);
 
 function initialize(evt) {
     // create data source
-    let dataSource = new DjangoDataSource({
+    const dataSource = new DjangoDataSource({
         baseURL: 'http://127.0.0.1:8000/api/v1',
         refreshInterval: 5000,
     });
     dataSource.activate();
 
-    let container = document.getElementById('react-container');
-    let element = createElement(FrontEnd, { dataSource });
+    const container = document.getElementById('react-container');
+    const element = createElement(FrontEnd, { dataSource });
     render(element, container);
 }
 ```
@@ -128,7 +153,7 @@ In an real-world app, something like 5 minutes would be more appropriate.
 
 ## FrontEnd
 
-`FrontEnd` ([front-end.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/front-end.jsx)) is our root React component. Its `render()` method will print a login form when authentication is required and the list of todos otherwise:
+`FrontEnd` ([front-end.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/front-end.jsx)) is our root React component. It's a functional component that makes use of various [hooks](https://reactjs.org/docs/hooks-intro.html). Its source code is listed below. We'll take a closer look at what each section does further down the page.
 
 ```javascript
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -144,12 +169,12 @@ import 'style.scss';
 function FrontEnd(props) {
     const { dataSource } = props;
     const [ dataChanged, setDataChanged ] = useEventTime();
-    const [ authenticating, setAuthenticating ] = useState(false);
     const django = useMemo(() => {
         return new Django(dataSource);
     }, [ dataSource, dataChanged ])
+    const [ authenticating, setAuthenticating ] = useState(false);
 
-    const handleDataSourceAuthentication = useCallback(async (evt) => {
+    const handleAuthentication = useCallback(async (evt) => {
         let token = sessionStorage.token;
         let success = await django.authorize(token);
         if (!success) {
@@ -157,26 +182,26 @@ function FrontEnd(props) {
             setAuthenticating(true);
         }
     });
-    const handleDataSourceAuthorization = useCallback((evt) => {
+    const handleAuthorization = useCallback((evt) => {
         if (evt.fresh) {
             sessionStorage.token = evt.token;
             setAuthenticating(false);
         }
     });
-    const handleDataSourceDeauthorization = useCallback((evt) => {
+    const handleDeauthorization = useCallback((evt) => {
         delete sessionStorage.token;
     });
 
     useEffect(() => {
         dataSource.addEventListener('change', setDataChanged);
-        dataSource.addEventListener('authentication', handleDataSourceAuthentication);
-        dataSource.addEventListener('authorization', handleDataSourceAuthorization);
-        dataSource.addEventListener('deauthorization', handleDataSourceDeauthorization);
+        dataSource.addEventListener('authentication', handleAuthentication);
+        dataSource.addEventListener('authorization', handleAuthorization);
+        dataSource.addEventListener('deauthorization', handleDeauthorization);
         return () => {
             dataSource.removeEventListener('change', setDataChanged);
-            dataSource.removeEventListener('authentication', handleDataSourceAuthentication);
-            dataSource.removeEventListener('authorization', handleDataSourceAuthorization);
-            dataSource.removeEventListener('deauthorization', handleDataSourceDeauthorization);
+            dataSource.removeEventListener('authentication', handleAuthentication);
+            dataSource.removeEventListener('authorization', handleAuthorization);
+            dataSource.removeEventListener('deauthorization', handleDeauthorization);
         };
     }, [ dataSource ])
 
@@ -207,26 +232,36 @@ export {
 };
 ```
 
-Note how each UI component receives `django` as a prop.
-
-We're placing boundary around our UI components so that any error encountered during rendering would appear on the page. That's what we saw earlier.
-
-In `componentDidMount()` we attach event listeners to the data source:
+As in [previous examples](https://github.com/trambarhq/relaks#examples), we're using the `useEventTime` hook to trigger the recreate of our data source's proxy object:
 
 ```javascript
-/* ... */
+    const [ dataChanged, setDataChanged ] = useEventTime();
+    const django = useMemo(() => {
+        return new Django(dataSource);
+    }, [ dataSource, dataChanged ])
 ```
 
-When a `change` event occurs, we recreate the data source's [proxy object](https://github.com/trambarhq/relaks#proxy-objects) to force rerendering:
+`setDataChanged` gets attached to `dataSource` alongside other event handlers in a `useEffect` hook:
 
 ```javascript
-/* ... */
+    useEffect(() => {
+        dataSource.addEventListener('change', setDataChanged);
+        dataSource.addEventListener('authentication', handleAuthentication);
+        dataSource.addEventListener('authorization', handleAuthorization);
+        dataSource.addEventListener('deauthorization', handleDeauthorization);
+        return () => {
+            dataSource.removeEventListener('change', setDataChanged);
+            dataSource.removeEventListener('authentication', handleAuthentication);
+            dataSource.removeEventListener('authorization', handleAuthorization);
+            dataSource.removeEventListener('deauthorization', handleDeauthorization);
+        };
+    }, [ dataSource ])
 ```
 
-The data source emits an `authentication` event when the remote server responds to a request with the [HTTP status code 401](https://httpstatuses.com/401). We handle the event by providing an authorization token that has been saved earlier into `sessionStorage`. If there isn't one or the token has expired, we change `authenticating` in `FrontEnd`'s state to `true`. The front-end will then rerender, showing the login form.
+The data source emits an `authentication` event when the remote server responds with the [HTTP status code 401](https://httpstatuses.com/401). We handle the event by providing an authorization token that has been saved earlier into `sessionStorage`. If there isn't one or the token has expired, we set the state variable `authenticating` to `true`. `FrontEnd` will then rerender, showing the login form.
 
 ```javascript
-const handleDataSourceAuthentication = useCallback(async (evt) => {
+const handleAuthentication = useCallback(async (evt) => {
     let token = sessionStorage.token;
     let success = await django.authorize(token);
     if (!success) {
@@ -236,11 +271,11 @@ const handleDataSourceAuthentication = useCallback(async (evt) => {
 });
 ```
 
-The data source emits an `authorization` event when it receives an authorization token. `evt.fresh` indicates whether the token is freshly issued by the server (as opposed to being given by the code above). If it is, then we save the token to `sessionStorage` and stop showing the login form.
+The data source emits an `authorization` event when it receives an authorization token. We save the authorization token to `sessionStorage` and stop showing the login form.
 
 ```javascript
-const handleDataSourceAuthorization = useCallback((evt) => {
-    if (evt.fresh) {
+const handleAuthorization = useCallback((evt) => {
+    if (authenticating) {
         sessionStorage.token = evt.token;
         setAuthenticating(false);
     }
@@ -250,10 +285,39 @@ const handleDataSourceAuthorization = useCallback((evt) => {
 The `deauthorization` event occurs when the user logs out. That's time to get rid of the saved token.
 
 ```javascript
-const handleDataSourceDeauthorization = useCallback((evt) => {
+const handleDeauthorization = useCallback((evt) => {
     delete sessionStorage.token;
 });
 ```
+
+At the end of the function we return either `LoginForm` or `TodoList` depending on whether we're in the middle of authentication:
+
+```javascript
+    if (authenticating) {
+        return (
+            <div>
+                <ErrorBoundary>
+                    <h1>Log in</h1>
+                    <LoginForm django={django} />
+                </ErrorBoundary>
+            </div>
+        );
+    } else {
+        return (
+            <div>
+                <ErrorBoundary>
+                    <LogoutButton django={django} />
+                    <h1>To-Do list</h1>
+                    <TodoList django={django} />
+                </ErrorBoundary>
+            </div>
+        );
+    }
+```
+
+Note how each UI component receives `django` as a prop.
+
+We're placing `ErrorBoundary` around our UI components for that any error encountered during rendering would appear on screen. That's what we saw earlier.
 
 ## Data source proxy
 
@@ -306,9 +370,9 @@ export {
 };
 ```
 
-## Login form
+## LoginForm
 
-The `render()` method of LoginForm ([login-form.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/login-form.jsx)) just renders a couple text fields and a button:
+`LoginForm` ([login-form.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/login-form.jsx)) renders a couple text fields and a button. Its source code is fairly straight forward:
 
 ```javascript
 import React, { useState, useCallback } from 'react';
@@ -376,16 +440,15 @@ export {
 The event handlers given to the input fields save text into the form's state:
 
 ```javascript
-handleUsernameChange = (evt) => {
-    this.setState({ username: evt.target.value });
-}
-
-handlePasswordChange = (evt) => {
-    this.setState({ password: evt.target.value });
-}
+const handleUsernameChange = useCallback((evt) => {
+        setUsername(evt.target.value);
+    });
+    const handlePasswordChange = useCallback((evt) => {
+        setPassword(evt.target.value);
+    });
 ```
 
-When the user clicks the button, the form element fires a `submit` event. We try to log into the system by calling calling `django.logIn()` with the user-provided credentials. If it works, then `FrontEnd` will rerender and `LoginForm` will be unmounted. We're done here. If it doesn't we'll save the error object to the form's state so it can be shown to the user.
+When the user clicks the button, the form element fires a `submit` event. We try to log into the system by calling calling `django.logIn()` with the user-provided credentials:
 
 ```javascript
 const handleFormSubmit = useCallback(async (evt) => {
@@ -402,9 +465,11 @@ const handleFormSubmit = useCallback(async (evt) => {
 }, [ django ]);
 ```
 
-## Logout button
+If authentication succeeds, the data source will emit an `authorization` event, `FrontEnd` will rerender and `LoginForm` will be unmounted--we're done here. If it doesn't, we save the error object to the form's state so it can be shown to the user.
 
-`LogoutButton` ([logout-button.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/logout-button.jsx)) is extremely simple. It renders a button when the user is logged in and nothing when he's not:
+## LogoutButton
+
+`LogoutButton` ([logout-button.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/logout-button.jsx)) is very simple. It renders a button when the user is logged in and nothing when he's not:
 
 ```javascript
 import React, { useCallback } from 'react';
@@ -433,13 +498,9 @@ export {
 
 When the user clicks the button, we call `django.logOut()` to log him out of the system.
 
-```javascript
-/* ... */
-```
+## TodoList
 
-## Todo list
-
-`TodoList` ([todo-list.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/todo-list.jsx)) is a Relaks `AsyncComponent`. Its job is to fetch data from the remote database and pass it to its synchronous half. Doing so involves just a single asynchronous method call:
+`TodoList` ([todo-list.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/todo-list.jsx)) is a Relaks component. It uses the `useProgress` hook to render itself:
 
 ```javascript
 import React from 'react';
@@ -458,8 +519,6 @@ async function TodoList(props) {
     };
     const todos = await django.fetchList('/', options);
     render();
-
-    todos.more();
 
     function render() {
         if (!todos) {
@@ -486,19 +545,47 @@ export {
 };
 ```
 
-The options given to `fetchList()` are [hooks](https://github.com/trambarhq/relaks-django-data-source#hooks) that update cached results after a write operation. When an object is inserted into a table, by default the data source would choose to rerun a query because it does not know whether the new object meets the query's criteria. Here, we're fetching all objects in the order they were created. We know a newly created object has to show up at the end of the list. We can therefore save a trip to the server by telling the data source to simply push the object into the array. An update to an object can likewise be handled by replacing the old one.
-
-The call to `more()` would trigger retrieval of additional pages when pagination is used. It doesn't do anything at this time.
-
-The `render()` method of `TodoListSync` takes the list of todos given to it and renders a `TodoView` component for each:
+The following is the core logic of the component:
 
 ```javascript
-/* ... */
+    render();
+    const options = {
+        afterInsert: 'push',
+        afterUpdate: 'replace',
+        afterDelete: 'remove',
+    };
+    const todos = await django.fetchList('/', options);
+    render();
+```
+
+Render without data. Fetch data. Render with data. It's pretty simple.
+
+The options given to `fetchList()` are [hooks](https://github.com/trambarhq/relaks-django-data-source#hooks) that update cached results after a write operation. When an object is inserted into a table, by default the data source would choose to rerun a query because it does not know whether the new object meets the query's criteria. Here, we're fetching all objects in the order they were created. We know a newly created object has to show up at the end of the list. We can therefore save a trip to the server by telling the data source to simply push the object into the array. An update to an object can likewise be handled by replacing the old one.
+
+`render()` uses `show()` from the `useProgress` to render the component's UI. This helper function in turn calls another helper function:
+
+```javascript
+    function render() {
+        if (!todos) {
+            show(<div>Loading...</div>);
+        } else {
+            show(
+                <ul className="todo-list">
+                    {todos.map(renderTodo)}
+                    <TodoView key={0} django={django} />
+                </ul>
+            );
+        }
+    }
+
+    function renderTodo(todo) {
+        return <TodoView key={todo.id} django={django} todo={todo} />;
+    }
 ```
 
 An extra item is rendered at the end for adding new todo. Its `todo` prop will be `undefined`.
 
-## Todo view
+## TodoView
 
 `TodoView` ([todo-view.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/todo-view.jsx)) is a regular React component. It has three different appearances: (1) when it permits editing; (2) when it's showing a todo; (3) when it's just a button for adding a new todo.
 
@@ -528,8 +615,8 @@ function TodoView(props) {
             return restoreObject('draft', base);
         },
     });
-    const [ expanded, setExpanded ] = useState(draft.changed);
     const [ editing, setEditing ] = useState(draft.changed);
+    const [ expanded, setExpanded ] = useState(draft.changed);
 
     const titleRef = useRef();
     const descriptionRef = useRef();
@@ -548,9 +635,6 @@ function TodoView(props) {
         await draft.save();
         setEditing(false);
         draft.reset();
-    });
-    const handleAddClick = useCallback((evt) => {
-        setEditing(true);
     });
     const handleCancelClick = useCallback((evt) => {
         setEditing(false);
@@ -618,7 +702,7 @@ function TodoView(props) {
     function renderAddButton() {
         return (
             <li className="todo-view add">
-                <span className="add-button" onClick={handleAddClick}>
+                <span className="add-button" onClick={handleEditClick}>
                     Add new item
                 </span>
             </li>
@@ -771,7 +855,7 @@ Let us examine step-by-step the creation process of a todo so you have clearer u
 4. The data source runs the `afterInsert` hooks of all impacted queries.
 5. The `push` handler places the new object at the end our `fetchList()` query's cached results.
 6. The data source emits a `change` event.
-7. `handleDataSourceChange()` creates a new `Django` object and calls `setState()`.
+7. `handleChange()` creates a new `Django` object and calls `setState()`.
 8. `FrontEnd` rerenders.
 9. `renderAsync()` of `TodoList` is called, which in turns calls `fetchList()`.
 10. `fetchList()` immediately returns the modified cached results.
@@ -781,14 +865,14 @@ If we hadn't specified `push` as the `afterInsert` hook, the sequence of event w
 
 5. The default `refresh` handler marks the `fetchList()` query as out-of-date.
 6. The data source emits a `change` event.
-7. `handleDataSourceChange()` creates a new `Django` object and calls `setState()`.
+7. `handleChange()` creates a new `Django` object and calls `setState()`.
 8. `FrontEnd` rerenders.
 9. `renderAsync()` of `TodoList` is called, which in turns calls `fetchList()`.
 10. `fetchList()` immediately returns the old cached results and initiates a rerunning of the query.
 11. `TodoListAsync` rerenders the old list of todos.
 12. The data source receives the query's results after some time.
 13. It notices that the list is different and emits a `change` event.
-14. `handleDataSourceChange()` creates a new `Django` object again and calls `setState()`.
+14. `handleChange()` creates a new `Django` object again and calls `setState()`.
 15. `FrontEnd` rerenders.
 16. `fetchList()` immediately returns the new results.
 17. `TodoListAsync` rerenders the list of todos, with the new one added.

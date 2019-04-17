@@ -16,7 +16,7 @@ function FrontEnd(props) {
         return new Django(dataSource);
     }, [ dataSource, dataChanged ])
 
-    const handleDataSourceAuthentication = useCallback(async (evt) => {
+    const handleAuthentication = useCallback(async (evt) => {
         let token = sessionStorage.token;
         let success = await django.authorize(token);
         if (!success) {
@@ -24,26 +24,26 @@ function FrontEnd(props) {
             setAuthenticating(true);
         }
     });
-    const handleDataSourceAuthorization = useCallback((evt) => {
-        if (evt.fresh) {
+    const handleAuthorization = useCallback((evt) => {
+        if (authenticating) {
             sessionStorage.token = evt.token;
             setAuthenticating(false);
         }
     });
-    const handleDataSourceDeauthorization = useCallback((evt) => {
+    const handleDeauthorization = useCallback((evt) => {
         delete sessionStorage.token;
     });
 
     useEffect(() => {
         dataSource.addEventListener('change', setDataChanged);
-        dataSource.addEventListener('authentication', handleDataSourceAuthentication);
-        dataSource.addEventListener('authorization', handleDataSourceAuthorization);
-        dataSource.addEventListener('deauthorization', handleDataSourceDeauthorization);
+        dataSource.addEventListener('authentication', handleAuthentication);
+        dataSource.addEventListener('authorization', handleAuthorization);
+        dataSource.addEventListener('deauthorization', handleDeauthorization);
         return () => {
             dataSource.removeEventListener('change', setDataChanged);
-            dataSource.removeEventListener('authentication', handleDataSourceAuthentication);
-            dataSource.removeEventListener('authorization', handleDataSourceAuthorization);
-            dataSource.removeEventListener('deauthorization', handleDataSourceDeauthorization);
+            dataSource.removeEventListener('authentication', handleAuthentication);
+            dataSource.removeEventListener('authorization', handleAuthorization);
+            dataSource.removeEventListener('deauthorization', handleDeauthorization);
         };
     }, [ dataSource ])
 

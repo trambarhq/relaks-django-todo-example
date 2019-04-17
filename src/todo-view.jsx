@@ -23,8 +23,8 @@ function TodoView(props) {
             return restoreObject('todo', base);
         },
     });
-    const [ expanded, setExpanded ] = useState(draft.changed);
     const [ editing, setEditing ] = useState(draft.changed);
+    const [ expanded, setExpanded ] = useState(draft.changed);
 
     const titleRef = useRef();
     const descriptionRef = useRef();
@@ -43,9 +43,6 @@ function TodoView(props) {
         await draft.save();
         setEditing(false);
         draft.reset();
-    });
-    const handleAddClick = useCallback((evt) => {
-        setEditing(true);
     });
     const handleCancelClick = useCallback((evt) => {
         setEditing(false);
