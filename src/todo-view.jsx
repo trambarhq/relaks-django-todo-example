@@ -1,17 +1,47 @@
-import React, { useState, useCallback } from 'react';
-import { useSaveBuffer } from 'relaks';
+import _ from 'lodash';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useSaveBuffer, useStickySelection } from 'relaks';
+import { mergeObjects } from 'merge-utils';
 
 function TodoView(props) {
     const { django, todo } = props;
-    const [ expanded, setExpanded ] = useState(false);
-    const [ editing, setEditing ] = useState(false);
-    const [ id, setID ] = useState();
     const draft = useSaveBuffer({
-        original: todo,
-        save: (base, ours) => {
-            django.saveOne('/', ours);
+        original: _.defaults(todo, { title: '', description: '' }),
+        compare: _.isEqual,
+        merge: mergeObjects,
+        save: async (base, ours) => {
+            return django.saveOne('/', ours);
+        },
+        delete: async (base, ours) => {
+            return django.deleteOne('/', todo);
+        },
+        preserve: (base, ours) => {
+            if (ours) {
+                const date = (new Date).toISOString();
+                const json = JSON.stringify({ object: ours, date});
+                localStorage.draft = json;
+            } else {
+                delete localStorage.draft;
+            }
+        },
+        restore: (base) => {
+            const json = localStorage.draft;
+            if (json) {
+                const { date, object } = JSON.parse(json);
+                if (object.id === base.id) {
+                    if ((new Date - new Date(date)) < 3600000) {
+                        return object;
+                    }
+                }
+            }
         },
     });
+    const [ expanded, setExpanded ] = useState(draft.changed);
+    const [ editing, setEditing ] = useState(draft.changed);
+
+    const titleRef = useRef();
+    const descriptionRef = useRef();
+    useStickySelection([ titleRef, descriptionRef ]);
 
     const handleTitleClick = useCallback((evt) => {
         setExpanded(!expanded);
@@ -20,16 +50,20 @@ function TodoView(props) {
         setEditing(true);
     });
     const handleDeleteClick = useCallback(async (evt) => {
-        await django.deleteOne('/', todo);
-    }, [ django, todo ]);
+        draft.delete();
+    });
     const handleSaveClick = useCallback(async (evt) => {
         await draft.save();
         setEditing(false);
+        if (!todo) {
+            draft.reset();
+        }
     });
     const handleAddClick = useCallback((evt) => {
         setEditing(true);
     });
     const handleCancelClick = useCallback((evt) => {
+        draft.cancel();
         setEditing(false);
     });
     const handleTitleChange = useCallback((evt) => {
@@ -70,16 +104,17 @@ function TodoView(props) {
     }
 
     function renderEditor() {
-        let { title, description } = draft.current;
-        let disabled = !title.trim() || !description.trim();
+        const { title, description } = draft.current;
+        const empty = !_.trim(title) || !_.trim(description);
+        const disabled = !draft.changed || empty;
         return (
             <li className="todo-view expanded edit">
                 <div className="title">
-                    <input type="text" value={title} onChange={handleTitleChange} />
+                    <input ref={titleRef} type="text" value={title} onChange={handleTitleChange} />
                 </div>
                 <div className="extra">
                     <div className="description">
-                        <textarea value={description} onChange={handleDescriptionChange} />
+                        <textarea ref={descriptionRef} value={description} onChange={handleDescriptionChange} />
                     </div>
                     <div className="buttons">
                         <button onClick={handleSaveClick} disabled={disabled}>Save</button>

@@ -15,9 +15,6 @@ function FrontEnd(props) {
     const django = useMemo(() => {
         return new Django(dataSource);
     }, [ dataSource, dataChanged ])
-    if (dataChanged) {
-        console.log(dataChanged.toISOString());
-    }
 
     const handleDataSourceAuthentication = useCallback(async (evt) => {
         let token = sessionStorage.token;
