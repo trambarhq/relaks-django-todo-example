@@ -3,19 +3,6 @@ Relaks Django Todo Example
 
 This example demonstrates how to build an front-end that modifies a remote database using [Relaks](https://github.com/trambarhq/relaks) and [Relaks Django Data Source](https://github.com/trambarhq/relaks-django-data-source). It makes use of the Django backend in William S. Vincent's [tutorial on the Django REST framework](https://wsvincent.com/django-rest-framework-authentication-tutorial/). The database consists of a list of todo items. We'll build a simple frontend that lets the user add new items and edit them.
 
-* [Getting started](#getting-started)
-* [Tripping an error boundary](#tripping-an-error-boundary)
-* [Enabling access control](#enabling-access-control)
-* [Bootstrap code](#boostrap-code)
-* [FrontEnd](#frontend)
-* [Data source proxy](#data-source-proxy)
-* [Login form](#login-forum)
-* [Logout button](#logout-button)
-* [Todo list](#todo-list)
-* [Todo view](#todo-view)
-* [Update cycle](#update-cycle)
-* [Final word](#final-word)
-
 ## Getting started
 
 First, set up Django and Django REST, following the detailed instructions at the [Mr. Vincent's post](https://wsvincent.com/django-rest-framework-authentication-tutorial/). Once you have Django up and running, clone this repository then run `npm install`. Once that's done, run `npm run start` to launch [WebPack Dev Server](https://webpack.js.org/configuration/dev-server/). Open a browser window and enter `http://localhost:8080` as the location.
