@@ -17,10 +17,10 @@ function TodoView(props) {
             return django.deleteOne('/', todo);
         },
         preserve: (base, ours) => {
-            preserveObject('draft', ours);
+            preserveObject('todo', ours);
         },
         restore: (base) => {
-            return restoreObject('draft', base);
+            return restoreObject('todo', base);
         },
     });
     const [ expanded, setExpanded ] = useState(draft.changed);
@@ -42,16 +42,14 @@ function TodoView(props) {
     const handleSaveClick = useCallback(async (evt) => {
         await draft.save();
         setEditing(false);
-        if (!todo) {
-            draft.reset();
-        }
+        draft.reset();
     });
     const handleAddClick = useCallback((evt) => {
         setEditing(true);
     });
     const handleCancelClick = useCallback((evt) => {
-        draft.cancel();
         setEditing(false);
+        draft.reset();
     });
     const handleTitleChange = useCallback((evt) => {
         draft.assign({ title: evt.target.value });
