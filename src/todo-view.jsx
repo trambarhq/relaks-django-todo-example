@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useSaveBuffer, useStickySelection } from 'relaks';
 import { mergeObjects } from 'merge-utils';
 import { preserveObject, restoreObject } from 'storage-utils';
@@ -14,7 +14,7 @@ function TodoView(props) {
             return django.saveOne('/', ours);
         },
         delete: async (base, ours) => {
-            return django.deleteOne('/', todo);
+            return django.deleteOne('/', base);
         },
         preserve: (base, ours) => {
             preserveObject('todo', ours);
@@ -64,8 +64,8 @@ function TodoView(props) {
     }
 
     function renderView() {
-        let { title, description } = todo;
-        let className = 'todo-view';
+        const { title, description } = todo;
+        const className = 'todo-view';
         if (expanded) {
             className += ' expanded';
         }
@@ -110,7 +110,7 @@ function TodoView(props) {
     function renderAddButton() {
         return (
             <li className="todo-view add">
-                <span className="add-button" onClick={handleAddClick}>
+                <span className="add-button" onClick={handleEditClick}>
                     Add new item
                 </span>
             </li>

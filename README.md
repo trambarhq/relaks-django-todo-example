@@ -587,11 +587,11 @@ An extra item is rendered at the end for adding new todo. Its `todo` prop will b
 
 ## TodoView
 
-`TodoView` ([todo-view.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/todo-view.jsx)) is a regular React component. It has three different appearances: (1) when it permits editing; (2) when it's showing a todo; (3) when it's just a button for adding a new todo.
+`TodoView` ([todo-view.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/todo-view.jsx)) is a regular React component. It has three different appearances: (1) when it permits editing; (2) when it's showing a todo; (3) when it's just a button for adding a new todo. There's a lot going on so the code is somewhat longish. Just quickly skim through it. Explanation of each section will follow.
 
 ```javascript
 import _ from 'lodash';
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useSaveBuffer, useStickySelection } from 'relaks';
 import { mergeObjects } from 'merge-utils';
 import { preserveObject, restoreObject } from 'storage-utils';
@@ -715,13 +715,98 @@ export {
 };
 ```
 
+The function first obtains a *save buffer* from `useSaveBuffer`, a utility hook provided by Relaks. The buffer is used to hold local changes before they're sent to the server.
+
+```javascript
+    const draft = useSaveBuffer({
+        original: _.defaults(todo, { title: '', description: '' }),
+        compare: _.isEqual,
+        merge: mergeObjects,
+        save: async (base, ours) => {
+            return django.saveOne('/', ours);
+        },
+        delete: async (base, ours) => {
+            return django.deleteOne('/', base);
+        },
+        preserve: (base, ours) => {
+            preserveObject('draft', ours);
+        },
+        restore: (base) => {
+            return restoreObject('draft', base);
+        },
+    });
+```
+
+`useSaveBuffer` accepts an object as its only parameter. `original` holds a copy of the object from the remote server. Here we're using lodash's `defaults` function to ensure it has the expected properties. Recall that `todo` can be `undefined`.
+
+`compare` is a function for checking if two values are the same. The default implementation performs an exactly comparison (===), which doesn't work for objects. So we have to supply lodash's `isEqual` function.
+
+`merge` is a function used to merge in new changes from the remote server. It's invoked  the object given as `original` is different from the one in the prior call to `useSaveBuffer` and there're unsaved local changes. The function accepts three parameters: `base`, `ours`, and `theirs`. `base` is the previous object from the server. `ours` is the object with local changes. `theirs` is the new object from the server. These allows us to do a [three-way merge](http://www.drdobbs.com/tools/three-way-merging-a-look-under-the-hood/240164902), incorporating the local changes into the new object. The default implementation simply returns `theirs`, meaning the user would lose his changes.
+
+The implementation provided in this example is fairly sophisticated. You can see it [here](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/merge-utils.js).
+
+`save` is an asynchronous function for saving the object. It's given two parameters: `base` and `ours`. `base` is the original object (i.e. the object in `original`) while `ours` is the object with local changes.
+
+`delete` is an asynchronous function for deleting the object. It's likewise given `base` and `ours`.
+
+`preserve` is a function for saving changes temporarily in local storage, in case the user accidentally hit the reload button or the browser crashes. Its use isn't required but it's a nice feature to have.
+
+`restore` is a function that loads the temporarily saved object.
+
+You can see the code for `preserveObject()` and `restoreObject()` [here](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/storage-utils.js).
+
+```javascript
+    function renderEditor() {
+        const { title, description } = draft.current;
+        const empty = !_.trim(title) || !_.trim(description);
+        const disabled = !draft.changed || empty;
+        return (
+            <li className="todo-view expanded edit">
+                <div className="title">
+                    <input ref={titleRef} type="text" value={title} onChange={handleTitleChange} />
+                </div>
+                <div className="extra">
+                    <div className="description">
+                        <textarea ref={descriptionRef} value={description} onChange={handleDescriptionChange} />
+                    </div>
+                    <div className="buttons">
+                        <button onClick={handleSaveClick} disabled={disabled}>Save</button>
+                        <button onClick={handleCancelClick}>Cancel</button>
+                    </div>
+                </div>
+            </li>
+        );
+    }
+```
+
+```javascript
+    const handleTitleChange = useCallback((evt) => {
+        draft.assign({ title: evt.target.value });
+    });
+    const handleDescriptionChange = useCallback((evt) => {
+        draft.assign({ description: evt.target.value });
+    });
+```
+
+```javascript
+    const handleSaveClick = useCallback(async (evt) => {
+        await draft.save();
+        setEditing(false);
+        draft.reset();
+    });
+    const handleCancelClick = useCallback((evt) => {
+        setEditing(false);
+        draft.reset();
+    });
+```
+
 The last case is the simplest:
 
 ```javascript
     function renderAddButton() {
         return (
             <li className="todo-view add">
-                <span className="add-button" onClick={handleAddClick}>
+                <span className="add-button" onClick={handleEditClick}>
                     Add new item
                 </span>
             </li>
@@ -774,7 +859,7 @@ When the user makes changes, these handlers are called:
     });
 ```
 
-When he clicks the save button, we call `django.saveOne()` to save the item. Depending on whether `id` is defined, either an insert or an update operation will be performed. When that finishes, we exit edit mode.
+When he clicks the save button, we call `draft.saveOne()` to save the item. Depending on whether `id` is defined, either an insert or an update operation will be performed. When that finishes, we exit edit mode.
 
 ```javascript
     const handleSaveClick = useCallback(async (evt) => {
@@ -796,29 +881,27 @@ If he clicks the cancel button, we exit without saving:
 In read-only mode, the only the title of the todo is shown initially. The description is rendered into a div that's clipped off (using CSS), along with a couple buttons. These are shown when the user expands the item by clicking on the title.
 
 ```javascript
-renderView() {
-    let { todo } = this.props;
-    let { expanded } = this.state;
-    let { title, description } = todo;
-    let className = 'todo-view';
-    if (expanded) {
-        className += ' expanded';
-    }
-    return (
-        <li className={className}>
-            <div className="title">
-                <span onClick={this.handleTitleClick}>{title}</span>
-            </div>
-            <div className="extra">
-                <div className="description">{description}</div>
-                <div className="buttons">
-                    <button onClick={this.handleEditClick}>Edit</button>
-                    <button onClick={this.handleDeleteClick}>Delete</button>
+    function renderView() {
+        const { title, description } = todo;
+        const className = 'todo-view';
+        if (expanded) {
+            className += ' expanded';
+        }
+        return (
+            <li className={className}>
+                <div className="title">
+                    <span onClick={handleTitleClick}>{title}</span>
                 </div>
-            </div>
-        </li>
-    );
-}
+                <div className="extra">
+                    <div className="description">{description}</div>
+                    <div className="buttons">
+                        <button onClick={handleEditClick}>Edit</button>
+                        <button onClick={handleDeleteClick}>Delete</button>
+                    </div>
+                </div>
+            </li>
+        );
+    }
 ```
 
 The click handler toggles `expanded` in `this.state`:
@@ -855,27 +938,23 @@ Let us examine step-by-step the creation process of a todo so you have clearer u
 4. The data source runs the `afterInsert` hooks of all impacted queries.
 5. The `push` handler places the new object at the end our `fetchList()` query's cached results.
 6. The data source emits a `change` event.
-7. `handleChange()` creates a new `Django` object and calls `setState()`.
-8. `FrontEnd` rerenders.
-9. `renderAsync()` of `TodoList` is called, which in turns calls `fetchList()`.
-10. `fetchList()` immediately returns the modified cached results.
-11. `TodoListAsync` rerenders the list of todos, with the new one added.
+7. `useMemo()` in `FrontEnd` creates a new `Django` object.
+8. `TodoList` is called, which in turns calls `fetchList()`.
+9. `fetchList()` immediately returns the modified cached results.
 
 If we hadn't specified `push` as the `afterInsert` hook, the sequence of event would be different starting at step 5:
 
 5. The default `refresh` handler marks the `fetchList()` query as out-of-date.
 6. The data source emits a `change` event.
-7. `handleChange()` creates a new `Django` object and calls `setState()`.
-8. `FrontEnd` rerenders.
-9. `renderAsync()` of `TodoList` is called, which in turns calls `fetchList()`.
-10. `fetchList()` immediately returns the old cached results and initiates a rerunning of the query.
-11. `TodoListAsync` rerenders the old list of todos.
-12. The data source receives the query's results after some time.
-13. It notices that the list is different and emits a `change` event.
-14. `handleChange()` creates a new `Django` object again and calls `setState()`.
-15. `FrontEnd` rerenders.
-16. `fetchList()` immediately returns the new results.
-17. `TodoListAsync` rerenders the list of todos, with the new one added.
+7. `useMemo()` in `FrontEnd` creates a new `Django` object.
+8. `TodoList` is called, which in turns calls `fetchList()`.
+9. `fetchList()` immediately returns the old cached results and sends a request to the server.
+10. `TodoList` rerenders the old list of todos.
+11. The data source receives the query's results after some time. It notices that the list is different and emits a `change` event.
+12. `useMemo()` in `FrontEnd` creates a new `Django` object again.
+13. `TodoList` is called, which in turns calls `fetchList()`.
+14. `fetchList()` immediately returns the new results.
+15. `TodoList` rerenders the list of todos, which contains the one that was added.
 
 The default behavior still yields the correct end result, but will seem less smooth as the new object would not appear until the full list is fetched once again.
 
