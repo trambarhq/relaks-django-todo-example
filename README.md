@@ -117,7 +117,7 @@ REST_FRAMEWORK = {
 }
 ```
 
-You can make the changes Django is still running. They'll be applied as soon as you save the file. A login screen should now appear in our front-end.
+You can make the changes while Django is still running. They'll take effect as soon as you save the file. A login screen should now appear in our front-end.
 
 Phew! Now that we've got everything up and working, let's take a look at the code.
 
@@ -147,7 +147,7 @@ function initialize(evt) {
 }
 ```
 
-Basically, we create the data source (the Django adapter) and hands it to `FrontEnd`. The refresh interval is set to a rather extreme 5 seconds. This is so that we would quickly see changes made through the Django admin tool. You can try it by logging into the admin tool at `http://127.0.0.1:8000/admin/` and manually adding a todo item. It should appear in the front-end after a few seconds. You can also try running multiple instances of the front-end in different browser windows.
+Basically, we create the data source (the Django adapter) and hand it to `FrontEnd`. The refresh interval is set to a rather extreme 5 seconds. This is so that we would quickly see changes made through the Django admin tool. You can try it by logging into the admin tool at `http://127.0.0.1:8000/admin/` and manually adding a todo item. It should appear in the front-end after a few seconds. You can also try running multiple instances of the front-end in different browser windows.
 
 In an real-world app, something like 5 minutes would be more appropriate.
 
@@ -317,7 +317,7 @@ At the end of the function we return either `LoginForm` or `TodoList` depending 
 
 Note how each UI component receives `django` as a prop.
 
-We're placing `ErrorBoundary` around our UI components for that any error encountered during rendering would appear on screen. That's what we saw earlier.
+We're placing `ErrorBoundary` around our UI components so that any error encountered during rendering would appear on screen. That's what we saw earlier.
 
 ## Data source proxy
 
@@ -440,7 +440,7 @@ export {
 The event handlers given to the input fields save text into the form's state:
 
 ```javascript
-const handleUsernameChange = useCallback((evt) => {
+    const handleUsernameChange = useCallback((evt) => {
         setUsername(evt.target.value);
     });
     const handlePasswordChange = useCallback((evt) => {
@@ -562,7 +562,7 @@ Render without data. Fetch data. Render with data. It's pretty simple.
 
 The options given to `fetchList()` are [hooks](https://github.com/trambarhq/relaks-django-data-source#hooks) that update cached results after a write operation. When an object is inserted into a table, by default the data source would choose to rerun a query because it does not know whether the new object meets the query's criteria. Here, we're fetching all objects in the order they were created. We know a newly created object has to show up at the end of the list. We can therefore save a trip to the server by telling the data source to simply push the object into the array. An update to an object can likewise be handled by replacing the old one.
 
-`render()` uses `show()` from the `useProgress` to render the component's UI. This helper function in turn calls another helper function:
+`render()` uses `show()` from the `useProgress` hook to render the component's UI. This helper function in turn calls another helper function:
 
 ```javascript
     function render() {
@@ -583,7 +583,7 @@ The options given to `fetchList()` are [hooks](https://github.com/trambarhq/rela
     }
 ```
 
-An extra item is rendered at the end for adding new todo. Its `todo` prop will be `undefined`.
+An extra item is rendered at the end for adding new todo. It has a key of 0 and its `todo` prop will be `undefined`.
 
 ## TodoView
 
@@ -715,7 +715,7 @@ export {
 };
 ```
 
-The function first obtains a *save buffer* from `useSaveBuffer`, a utility hook provided by Relaks. The buffer is used to hold local changes before they're sent to the server.
+The function first obtains a **save buffer** from `useSaveBuffer`, a utility hook provided by Relaks. The buffer is used to hold local changes before they're sent to the server.
 
 ```javascript
     const draft = useSaveBuffer({
@@ -743,86 +743,19 @@ The function first obtains a *save buffer* from `useSaveBuffer`, a utility hook 
 
 `merge` is a function used to merge in new changes from the remote server. It's invoked  the object given as `original` is different from the one in the prior call to `useSaveBuffer` and there're unsaved local changes. The function accepts three parameters: `base`, `ours`, and `theirs`. `base` is the previous object from the server. `ours` is the object with local changes. `theirs` is the new object from the server. These allows us to do a [three-way merge](http://www.drdobbs.com/tools/three-way-merging-a-look-under-the-hood/240164902), incorporating the local changes into the new object. The default implementation simply returns `theirs`, meaning the user would lose his changes.
 
-The implementation provided in this example is fairly sophisticated. You can see it [here](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/merge-utils.js).
+The implementation provided in this example is fairly sophisticated. It allows multiple users to edit different sections of the same text. You can see the code [here](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/merge-utils.js).
 
 `save` is an asynchronous function for saving the object. It's given two parameters: `base` and `ours`. `base` is the original object (i.e. the object in `original`) while `ours` is the object with local changes.
 
 `delete` is an asynchronous function for deleting the object. It's likewise given `base` and `ours`.
 
-`preserve` is a function for saving changes temporarily in local storage, in case the user accidentally hit the reload button or the browser crashes. Its use isn't required but it's a nice feature to have.
+`preserve` is a function for saving changes temporarily in local storage, in case the user accidentally hits the reload button (or the browser crashes). Its use isn't required but it's a nice feature to have.
 
 `restore` is a function that loads the temporarily saved object.
 
 You can see the code for `preserveObject()` and `restoreObject()` [here](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/storage-utils.js).
 
-```javascript
-    function renderEditor() {
-        const { title, description } = draft.current;
-        const empty = !_.trim(title) || !_.trim(description);
-        const disabled = !draft.changed || empty;
-        return (
-            <li className="todo-view expanded edit">
-                <div className="title">
-                    <input ref={titleRef} type="text" value={title} onChange={handleTitleChange} />
-                </div>
-                <div className="extra">
-                    <div className="description">
-                        <textarea ref={descriptionRef} value={description} onChange={handleDescriptionChange} />
-                    </div>
-                    <div className="buttons">
-                        <button onClick={handleSaveClick} disabled={disabled}>Save</button>
-                        <button onClick={handleCancelClick}>Cancel</button>
-                    </div>
-                </div>
-            </li>
-        );
-    }
-```
-
-```javascript
-    const handleTitleChange = useCallback((evt) => {
-        draft.assign({ title: evt.target.value });
-    });
-    const handleDescriptionChange = useCallback((evt) => {
-        draft.assign({ description: evt.target.value });
-    });
-```
-
-```javascript
-    const handleSaveClick = useCallback(async (evt) => {
-        await draft.save();
-        setEditing(false);
-        draft.reset();
-    });
-    const handleCancelClick = useCallback((evt) => {
-        setEditing(false);
-        draft.reset();
-    });
-```
-
-The last case is the simplest:
-
-```javascript
-    function renderAddButton() {
-        return (
-            <li className="todo-view add">
-                <span className="add-button" onClick={handleEditClick}>
-                    Add new item
-                </span>
-            </li>
-        );
-    }
-```
-
-When the user clicks it, we switch into edit mode:
-
-```javascript
-    const handleAddClick = useCallback((evt) => {
-        setEditing(true);
-    });
-```
-
-In edit mode, a text input and a text area, along with a couple buttons, are rendered:
+`draft.current` holds the save buffer's current value. Initially, it's going to be the same as `original` and `draft.changed` will be false. Values from `draft.current` are used to populate our input fields:
 
 ```javascript
     function renderEditor() {
@@ -848,7 +781,7 @@ In edit mode, a text input and a text area, along with a couple buttons, are ren
     }
 ```
 
-When the user makes changes, these handlers are called:
+When the user makes changes through the input fields, `draft.assign()` is called to modify the object:
 
 ```javascript
     const handleTitleChange = useCallback((evt) => {
@@ -859,7 +792,7 @@ When the user makes changes, these handlers are called:
     });
 ```
 
-When he clicks the save button, we call `draft.saveOne()` to save the item. Depending on whether `id` is defined, either an insert or an update operation will be performed. When that finishes, we exit edit mode.
+When the user clicks the Save button, `draft.save()` will be called, which basically invokes the corresponding function given to `useSaveBuffer`.
 
 ```javascript
     const handleSaveClick = useCallback(async (evt) => {
@@ -869,7 +802,9 @@ When he clicks the save button, we call `draft.saveOne()` to save the item. Depe
     });
 ```
 
-If he clicks the cancel button, we exit without saving:
+After the object is saved, we call `setEditing()` to exit edit mode and `draft.reset()` to reset the buffer to the initial state. This is done so that the instance of `TodoView` with key = 0 won't retain the title and description after a new todo is added.
+
+When the user clicks the Cancel button, the same method is called:
 
 ```javascript
     const handleCancelClick = useCallback((evt) => {
@@ -878,7 +813,26 @@ If he clicks the cancel button, we exit without saving:
     });
 ```
 
-In read-only mode, the only the title of the todo is shown initially. The description is rendered into a div that's clipped off (using CSS), along with a couple buttons. These are shown when the user expands the item by clicking on the title.
+We use the utility hook `useStickySelection` (provided by Relaks) to maintain the cursor position when new data arrives from the remote server. Without it, concurrent editing would get incredibly annoying as the cursor would continually jump to the end.
+
+```javascript
+    const titleRef = useRef();
+    const descriptionRef = useRef();
+    useStickySelection([ titleRef, descriptionRef ]);
+```
+
+The hook accepts an array of refs from `useRef`.
+
+Two state variables, `editing` and `expanded`, are used to track the whether we're editing the todo and whether the view has been expanded:
+
+```javascript
+const [ editing, setEditing ] = useState(draft.changed);
+const [ expanded, setExpanded ] = useState(draft.changed);
+```
+
+Their initial values are `draft.changed`. Usually it'll be `false`. If unsaved changes were saved to local storage, however, `draft.changed` will be `true` from the very beginning. The component would then start out in edit mode.
+
+In read-only mode (`editing = false`), only the title of the todo is shown initially. The description, along with a couple buttons, are rendered into a div that's clipped off using CSS. These are shown when the user expands the item by clicking on the title.
 
 ```javascript
     function renderView() {
@@ -904,7 +858,7 @@ In read-only mode, the only the title of the todo is shown initially. The descri
     }
 ```
 
-The click handler toggles `expanded` in `this.state`:
+The click handler toggles `expanded`:
 
 ```javascript
     const handleTitleClick = useCallback((evt) => {
@@ -912,7 +866,7 @@ The click handler toggles `expanded` in `this.state`:
     }, [ expanded ]);
 ```
 
-When the user clicks the edit button, we enter edit mode, populating the state with the properties of the todo in question:
+When the user clicks the edit button, we enter edit mode:
 
 ```javascript
     const handleEditClick = useCallback((evt) => {
@@ -920,7 +874,7 @@ When the user clicks the edit button, we enter edit mode, populating the state w
     });
 ```
 
-If he clicks the delete button, we call `django.deleteOne()` to delete that item:
+If the user clicks the delete button, we call `draft.delete()`:
 
 ```javascript
     const handleDeleteClick = useCallback(async (evt) => {
@@ -928,11 +882,13 @@ If he clicks the delete button, we call `django.deleteOne()` to delete that item
     });
 ```
 
+`useSaveBuffer` will always return the same object for a given component instance. That's why we don't need to pass a variable list to `useCallback` here (or with the other handlers that use `draft`).
+
 ## Update cycle
 
 Let us examine step-by-step the creation process of a todo so you have clearer understanding of what actually happens.
 
-1. `handleSaveClick()` calls `saveOne()` with the new todo.
+1. `djanog.saveOne()` is called with the new todo.
 2. The object is sent to the server using the HTTP POST method.
 3. The server responds with a copy of the object, which now has a database id.
 4. The data source runs the `afterInsert` hooks of all impacted queries.
@@ -941,6 +897,7 @@ Let us examine step-by-step the creation process of a todo so you have clearer u
 7. `useMemo()` in `FrontEnd` creates a new `Django` object.
 8. `TodoList` is called, which in turns calls `fetchList()`.
 9. `fetchList()` immediately returns the modified cached results.
+10. `TodoList` rerenders the list of todos, which contains the one that was added.
 
 If we hadn't specified `push` as the `afterInsert` hook, the sequence of event would be different starting at step 5:
 
