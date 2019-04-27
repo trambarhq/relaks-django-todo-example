@@ -1,6 +1,6 @@
 {
   "name": "relaks-django-todo-example",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "An example showing how to build a frontend for a Django REST backend using Relaks.",
   "scripts": {
     "watch": "webpack --watch",
