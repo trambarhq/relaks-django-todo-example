@@ -21,7 +21,7 @@ We've run into a CORS violation. Django is listening at port 8000 while our fron
 
 ## Enabling CORS
 
-To enable CORS, we need to install the middleware [django-cors-headers](https://pypi.org/project/django-cors-headers/). First shutdown Django then run the following command at the command prompt:
+To enable CORS, we need to install the middleware [django-cors-headers](https://pypi.org/project/django-cors-headers/). First shutdown Django, then run the following command at the command prompt:
 
 ```sh
 pipenv install django-cors-headers
@@ -261,33 +261,33 @@ As in [previous examples](https://github.com/trambarhq/relaks#examples), we're u
 The data source emits an `authentication` event when the remote server responds with the [HTTP status code 401](https://httpstatuses.com/401). We handle the event by providing an authorization token that has been saved earlier into `sessionStorage`. If there isn't one or the token has expired, we set the state variable `authenticating` to `true`. `FrontEnd` will then rerender, showing the login form.
 
 ```javascript
-const handleAuthentication = useCallback(async (evt) => {
-    let token = sessionStorage.token;
-    let success = await django.authorize(token);
-    if (!success) {
-        delete sessionStorage.token;
-        setAuthenticating(true);
-    }
-});
+    const handleAuthentication = useCallback(async (evt) => {
+        let token = sessionStorage.token;
+        let success = await django.authorize(token);
+        if (!success) {
+            delete sessionStorage.token;
+            setAuthenticating(true);
+        }
+    });
 ```
 
 The data source emits an `authorization` event when it receives an authorization token. We save the authorization token to `sessionStorage` and stop showing the login form.
 
 ```javascript
-const handleAuthorization = useCallback((evt) => {
-    if (authenticating) {
-        sessionStorage.token = evt.token;
-        setAuthenticating(false);
-    }
-});
+    const handleAuthorization = useCallback((evt) => {
+        if (authenticating) {
+            sessionStorage.token = evt.token;
+            setAuthenticating(false);
+        }
+    });
 ```
 
 The `deauthorization` event occurs when the user logs out. That's time to get rid of the saved token.
 
 ```javascript
-const handleDeauthorization = useCallback((evt) => {
-    delete sessionStorage.token;
-});
+    const handleDeauthorization = useCallback((evt) => {
+        delete sessionStorage.token;
+    });
 ```
 
 At the end of the function we return either `LoginForm` or `TodoList` depending on whether we're in the middle of authentication:
@@ -448,7 +448,7 @@ The event handlers given to the input fields save text into the form's state:
     });
 ```
 
-When the user clicks the button, the form element fires a `submit` event. We try to log into the system by calling calling `django.logIn()` with the user-provided credentials:
+When the user clicks the button, the form element fires a `submit` event. We try to log into the system by calling `django.logIn()` with the user-provided credentials:
 
 ```javascript
 const handleFormSubmit = useCallback(async (evt) => {
@@ -737,11 +737,11 @@ The function first obtains a **save buffer** from `useSaveBuffer`, a utility hoo
     });
 ```
 
-`useSaveBuffer` accepts an object as its only parameter. `original` holds a copy of the object from the remote server. Here we're using lodash's `defaults` function to ensure it has the expected properties. Recall that `todo` can be `undefined`.
+`useSaveBuffer` accepts an object as its only parameter. `original` holds a copy of the object from the remote server. Here we're using lodash's `defaults()` to ensure it has the expected properties. Recall that `todo` can be `undefined`.
 
-`compare` is a function for checking if two values are the same. The default implementation performs an exactly comparison (===), which doesn't work for objects. So we have to supply lodash's `isEqual` function.
+`compare` is a function for checking if two values are the same. The default implementation performs an exactly comparison (===), which doesn't work for objects. So we have to supply lodash's `isEqual()`.
 
-`merge` is a function used to merge in new changes from the remote server. It's invoked  the object given as `original` is different from the one in the prior call to `useSaveBuffer` and there're unsaved local changes. The function accepts three parameters: `base`, `ours`, and `theirs`. `base` is the previous object from the server. `ours` is the object with local changes. `theirs` is the new object from the server. These allows us to do a [three-way merge](http://www.drdobbs.com/tools/three-way-merging-a-look-under-the-hood/240164902), incorporating the local changes into the new object. The default implementation simply returns `theirs`, meaning the user would lose his changes.
+`merge` is a function used to merge in new changes from the remote server. It's invoked  the object given as `original` is different from the one in the prior call to `useSaveBuffer` and there're unsaved local changes. The function accepts three parameters: `base`, `ours`, and `theirs`. `base` is the previous object from the server. `ours` is the object with local changes. `theirs` is the new object from the server. These allows us to do a [three-way merge](http://www.drdobbs.com/tools/three-way-merging-a-look-under-the-hood/240164902) incorporating the local changes into the new object. The default implementation simply returns `theirs`, meaning the user would lose his changes.
 
 The implementation provided in this example is fairly sophisticated. It allows multiple users to edit different sections of the same text. You can see the code [here](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/merge-utils.js).
 
