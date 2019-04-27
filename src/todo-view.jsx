@@ -65,12 +65,12 @@ function TodoView(props) {
 
     function renderView() {
         const { title, description } = todo;
-        const className = 'todo-view';
+        const classNames = [ 'todo-view' ];
         if (expanded) {
-            className += ' expanded';
+            classNames.push('expanded');
         }
         return (
-            <li className={className}>
+            <li className={classNames.join(' ')}>
                 <div className="title">
                     <span onClick={handleTitleClick}>{title}</span>
                 </div>

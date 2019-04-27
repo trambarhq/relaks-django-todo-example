@@ -17,8 +17,8 @@ function FrontEnd(props) {
     }, [ dataSource, dataChanged ])
 
     const handleAuthentication = useCallback(async (evt) => {
-        let token = sessionStorage.token;
-        let success = await django.authorize(token);
+        const token = sessionStorage.token;
+        const success = await django.authorize(token);
         if (!success) {
             delete sessionStorage.token;
             setAuthenticating(true);

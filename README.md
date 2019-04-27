@@ -175,8 +175,8 @@ function FrontEnd(props) {
     const [ authenticating, setAuthenticating ] = useState(false);
 
     const handleAuthentication = useCallback(async (evt) => {
-        let token = sessionStorage.token;
-        let success = await django.authorize(token);
+        const token = sessionStorage.token;
+        const success = await django.authorize(token);
         if (!success) {
             delete sessionStorage.token;
             setAuthenticating(true);
@@ -262,8 +262,8 @@ The data source emits an `authentication` event when the remote server responds 
 
 ```javascript
     const handleAuthentication = useCallback(async (evt) => {
-        let token = sessionStorage.token;
-        let success = await django.authorize(token);
+        const token = sessionStorage.token;
+        const success = await django.authorize(token);
         if (!success) {
             delete sessionStorage.token;
             setAuthenticating(true);
@@ -656,13 +656,13 @@ function TodoView(props) {
     }
 
     function renderView() {
-        let { title, description } = todo;
-        let className = 'todo-view';
+        const { title, description } = todo;
+        const classNames = [ 'todo-view' ];
         if (expanded) {
-            className += ' expanded';
+            classNames.push('expanded');
         }
         return (
-            <li className={className}>
+            <li className={classNames.join(' ')}>
                 <div className="title">
                     <span onClick={handleTitleClick}>{title}</span>
                 </div>
