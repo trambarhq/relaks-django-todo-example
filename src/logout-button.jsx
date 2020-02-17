@@ -1,22 +1,23 @@
-import React, { useCallback } from 'react';
+import React from 'react';
+import { useListener } from 'relaks';
 
 function LogoutButton(props) {
-    const { django } = props;
+  const { django } = props;
 
-    const handleClick = useCallback(async (evt) => {
-        await django.logOut();
-    }, [ django ]);
+  const handleClick = useListener(async (evt) => {
+    await django.logOut();
+  });
 
-    if (!django.loggedIn()) {
-        return null;
-    }
-    return (
-        <button className="logout" onClick={handleClick}>
-            Log out
-        </button>
-    );
+  if (!django.loggedIn()) {
+    return null;
+  }
+  return (
+    <button className="logout" onClick={handleClick}>
+      Log out
+    </button>
+  );
 }
 
 export {
-    LogoutButton,
+  LogoutButton,
 };

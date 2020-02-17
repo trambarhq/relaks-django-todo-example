@@ -73,7 +73,13 @@ Now when you refresh the web page, it should work properly...sort of. As configu
 
 ## Enabling access control
 
-Open `demo_project/settings.py` again. Add `rest_framework.authtoken` and `rest_auth` to `INSTALLED_APPS`:
+To enable access control, we need to install the middleware [django-rest-auth](https://pypi.org/project/django-rest-auth/). Shutdown Django and run the following command:
+
+```sh
+pipenv install django-rest-auth
+```
+
+Open `demo_project/settings.py` and add `rest_framework.authtoken` and `rest_auth` to `INSTALLED_APPS`:
 
 ```python
 # demo_project/settings.py
@@ -117,7 +123,21 @@ REST_FRAMEWORK = {
 }
 ```
 
-You can make the changes while Django is still running. They'll take effect as soon as you save the file. A login screen should now appear in our front-end.
+Open `demo_project/urls.py` and add the endpoint for `rest-auth`:
+
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/v1/', include('api.urls')),
+    path('api/v1/rest-auth/', include('rest_auth.urls')),   # new
+]
+```
+
+Start the server again:
+
+```sh
+python manage.py runserver
+```
 
 Phew! Now that we've got everything up and working, let's take a look at the code.
 
@@ -128,22 +148,22 @@ The bootstrap code ([main.js](https://github.com/trambarhq/relaks-django-todo-ex
 ```javascript
 import { createElement } from 'react';
 import { render } from 'react-dom';
-import { FrontEnd } from 'front-end';
-import DjangoDataSource from 'relaks-django-data-source';
+import { DataSource } from 'relaks-django-data-source';
+import { FrontEnd } from './front-end.jsx';
 
 window.addEventListener('load', initialize);
 
 function initialize(evt) {
-    // create data source
-    const dataSource = new DjangoDataSource({
-        baseURL: 'http://127.0.0.1:8000/api/v1',
-        refreshInterval: 5000,
-    });
-    dataSource.activate();
+  // create data source
+  const dataSource = new DataSource({
+    baseURL: 'http://127.0.0.1:8000/api/v1',
+    refreshInterval: 5000,
+  });
+  dataSource.activate();
 
-    const container = document.getElementById('react-container');
-    const element = createElement(FrontEnd, { dataSource });
-    render(element, container);
+  const container = document.getElementById('react-container');
+  const element = createElement(FrontEnd, { dataSource });
+  render(element, container);
 }
 ```
 
@@ -156,163 +176,163 @@ In an real-world app, something like 5 minutes would be more appropriate.
 `FrontEnd` ([front-end.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/front-end.jsx)) is our root React component. It's a functional component that makes use of various [hooks](https://reactjs.org/docs/hooks-intro.html). Its source code is listed below. We'll take a closer look at what each section does further down the page.
 
 ```javascript
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useEventTime } from 'relaks';
-import { Django } from 'django';
-import { LoginForm } from 'login-form';
-import { LogoutButton } from 'logout-button';
-import { TodoList } from 'todo-list';
-import { ErrorBoundary } from 'error-boundary';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useEventTime, useListener } from 'relaks';
+import { Django } from './django.js';
+import { LoginForm } from './login-form.jsx';
+import { LogoutButton } from './logout-button.jsx';
+import { TodoList } from './todo-list.jsx';
+import { ErrorBoundary } from './error-boundary.jsx';
 
-import 'style.scss';
+import './style.scss';
 
 function FrontEnd(props) {
-    const { dataSource } = props;
-    const [ dataChanged, setDataChanged ] = useEventTime();
-    const django = useMemo(() => {
-        return new Django(dataSource);
-    }, [ dataSource, dataChanged ])
-    const [ authenticating, setAuthenticating ] = useState(false);
+  const { dataSource } = props;
+  const [ dataChanged, setDataChanged ] = useEventTime();
+  const [ authenticating, setAuthenticating ] = useState(false);
+  const django = useMemo(() => {
+    return new Django(dataSource);
+  }, [ dataSource, dataChanged ])
 
-    const handleAuthentication = useCallback(async (evt) => {
-        const token = sessionStorage.token;
-        const success = await django.authorize(token);
-        if (!success) {
-            delete sessionStorage.token;
-            setAuthenticating(true);
-        }
-    });
-    const handleAuthorization = useCallback((evt) => {
-        if (evt.fresh) {
-            sessionStorage.token = evt.token;
-            setAuthenticating(false);
-        }
-    });
-    const handleDeauthorization = useCallback((evt) => {
-        delete sessionStorage.token;
-    });
-
-    useEffect(() => {
-        dataSource.addEventListener('change', setDataChanged);
-        dataSource.addEventListener('authentication', handleAuthentication);
-        dataSource.addEventListener('authorization', handleAuthorization);
-        dataSource.addEventListener('deauthorization', handleDeauthorization);
-        return () => {
-            dataSource.removeEventListener('change', setDataChanged);
-            dataSource.removeEventListener('authentication', handleAuthentication);
-            dataSource.removeEventListener('authorization', handleAuthorization);
-            dataSource.removeEventListener('deauthorization', handleDeauthorization);
-        };
-    }, [ dataSource ])
-
-    if (authenticating) {
-        return (
-            <div>
-                <ErrorBoundary>
-                    <h1>Log in</h1>
-                    <LoginForm django={django} />
-                </ErrorBoundary>
-            </div>
-        );
-    } else {
-        return (
-            <div>
-                <ErrorBoundary>
-                    <LogoutButton django={django} />
-                    <h1>To-Do list</h1>
-                    <TodoList django={django} />
-                </ErrorBoundary>
-            </div>
-        );
+  const handleAuthentication = useListener(async (evt) => {
+    const token = sessionStorage.token;
+    const success = await django.authorize(token);
+    if (!success) {
+      delete sessionStorage.token;
+      setAuthenticating(true);
     }
+  });
+  const handleAuthorization = useListener((evt) => {
+    if (authenticating) {
+      sessionStorage.token = evt.token;
+      setAuthenticating(false);
+    }
+  });
+  const handleDeauthorization = useListener((evt) => {
+    delete sessionStorage.token;
+  });
+
+  useEffect(() => {
+    dataSource.addEventListener('change', setDataChanged);
+    dataSource.addEventListener('authentication', handleAuthentication);
+    dataSource.addEventListener('authorization', handleAuthorization);
+    dataSource.addEventListener('deauthorization', handleDeauthorization);
+    return () => {
+      dataSource.removeEventListener('change', setDataChanged);
+      dataSource.removeEventListener('authentication', handleAuthentication);
+      dataSource.removeEventListener('authorization', handleAuthorization);
+      dataSource.removeEventListener('deauthorization', handleDeauthorization);
+    };
+  }, [ dataSource ])
+
+  if (authenticating) {
+    return (
+      <div>
+        <ErrorBoundary>
+          <h1>Log in</h1>
+          <LoginForm django={django} />
+        </ErrorBoundary>
+      </div>
+    );
+  } else {
+    return (
+      <div>
+        <ErrorBoundary>
+          <LogoutButton django={django} />
+          <h1>To-Do list</h1>
+          <TodoList django={django} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
 }
 
 export {
-    FrontEnd
+  FrontEnd
 };
 ```
 
 As in [previous examples](https://github.com/trambarhq/relaks#examples), we're using the `useEventTime` hook to trigger the recreate of our data source's proxy object:
 
 ```javascript
-    const [ dataChanged, setDataChanged ] = useEventTime();
-    const django = useMemo(() => {
-        return new Django(dataSource);
-    }, [ dataSource, dataChanged ])
+  const [ dataChanged, setDataChanged ] = useEventTime();
+  const django = useMemo(() => {
+    return new Django(dataSource);
+  }, [ dataSource, dataChanged ])
 ```
 
 `setDataChanged` gets attached to `dataSource` alongside other event handlers in a `useEffect` hook:
 
 ```javascript
-    useEffect(() => {
-        dataSource.addEventListener('change', setDataChanged);
-        dataSource.addEventListener('authentication', handleAuthentication);
-        dataSource.addEventListener('authorization', handleAuthorization);
-        dataSource.addEventListener('deauthorization', handleDeauthorization);
-        return () => {
-            dataSource.removeEventListener('change', setDataChanged);
-            dataSource.removeEventListener('authentication', handleAuthentication);
-            dataSource.removeEventListener('authorization', handleAuthorization);
-            dataSource.removeEventListener('deauthorization', handleDeauthorization);
-        };
-    }, [ dataSource ])
+  useEffect(() => {
+    dataSource.addEventListener('change', setDataChanged);
+    dataSource.addEventListener('authentication', handleAuthentication);
+    dataSource.addEventListener('authorization', handleAuthorization);
+    dataSource.addEventListener('deauthorization', handleDeauthorization);
+    return () => {
+      dataSource.removeEventListener('change', setDataChanged);
+      dataSource.removeEventListener('authentication', handleAuthentication);
+      dataSource.removeEventListener('authorization', handleAuthorization);
+      dataSource.removeEventListener('deauthorization', handleDeauthorization);
+    };
+  }, [ dataSource ])
 ```
 
 The data source emits an `authentication` event when the remote server responds with the [HTTP status code 401](https://httpstatuses.com/401). We handle the event by providing an authorization token that has been saved earlier into `sessionStorage`. If there isn't one or the token has expired, we set the state variable `authenticating` to `true`. `FrontEnd` will then rerender, showing the login form.
 
 ```javascript
-    const handleAuthentication = useCallback(async (evt) => {
-        const token = sessionStorage.token;
-        const success = await django.authorize(token);
-        if (!success) {
-            delete sessionStorage.token;
-            setAuthenticating(true);
-        }
-    });
+  const handleAuthentication = useListener(async (evt) => {
+    const token = sessionStorage.token;
+    const success = await django.authorize(token);
+    if (!success) {
+      delete sessionStorage.token;
+      setAuthenticating(true);
+    }
+  });
 ```
 
 The data source emits an `authorization` event when it receives an authorization token. We save the authorization token to `sessionStorage` and stop showing the login form.
 
 ```javascript
-    const handleAuthorization = useCallback((evt) => {
-        if (authenticating) {
-            sessionStorage.token = evt.token;
-            setAuthenticating(false);
-        }
-    });
+  const handleAuthorization = useListener((evt) => {
+    if (authenticating) {
+      sessionStorage.token = evt.token;
+      setAuthenticating(false);
+    }
+  });
 ```
 
 The `deauthorization` event occurs when the user logs out. That's time to get rid of the saved token.
 
 ```javascript
-    const handleDeauthorization = useCallback((evt) => {
-        delete sessionStorage.token;
-    });
+  const handleDeauthorization = useListener((evt) => {
+    delete sessionStorage.token;
+  });
 ```
 
 At the end of the function we return either `LoginForm` or `TodoList` depending on whether we're in the middle of authentication:
 
 ```javascript
-    if (authenticating) {
-        return (
-            <div>
-                <ErrorBoundary>
-                    <h1>Log in</h1>
-                    <LoginForm django={django} />
-                </ErrorBoundary>
-            </div>
-        );
-    } else {
-        return (
-            <div>
-                <ErrorBoundary>
-                    <LogoutButton django={django} />
-                    <h1>To-Do list</h1>
-                    <TodoList django={django} />
-                </ErrorBoundary>
-            </div>
-        );
-    }
+  if (authenticating) {
+    return (
+      <div>
+        <ErrorBoundary>
+          <h1>Log in</h1>
+          <LoginForm django={django} />
+        </ErrorBoundary>
+      </div>
+    );
+  } else {
+    return (
+      <div>
+        <ErrorBoundary>
+          <LogoutButton django={django} />
+          <h1>To-Do list</h1>
+          <TodoList django={django} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
 ```
 
 Note how each UI component receives `django` as a prop.
@@ -328,45 +348,45 @@ const loginURL = '/rest-auth/login/';
 const logoutURL = '/rest-auth/logout/';
 
 class Django {
-    constructor(dataSource) {
-        this.dataSource = dataSource;
-    }
+  constructor(dataSource) {
+    this.dataSource = dataSource;
+  }
 
-    async fetchList(url, options) {
-        return this.dataSource.fetchList(url, options);
-    }
+  async fetchList(url, options) {
+    return this.dataSource.fetchList(url, options);
+  }
 
-    async saveOne(url, object) {
-        if (object.id) {
-            return this.dataSource.updateOne(url, object);
-        } else {
-            return this.dataSource.insertOne(url, object);
-        }
+  async saveOne(url, object) {
+    if (object.id) {
+      return this.dataSource.updateOne(url, object);
+    } else {
+      return this.dataSource.insertOne(url, object);
     }
+  }
 
-    async deleteOne(url, object) {
-        return this.dataSource.deleteOne(url, object);
-    }
+  async deleteOne(url, object) {
+    return this.dataSource.deleteOne(url, object);
+  }
 
-    async logIn(credentials) {
-        return this.dataSource.authenticate(loginURL, credentials);
-    }
+  async logIn(credentials) {
+    return this.dataSource.authenticate(loginURL, credentials);
+  }
 
-    async logOut() {
-        return this.dataSource.revokeAuthorization(logoutURL);
-    }
+  async logOut() {
+    return this.dataSource.revokeAuthorization(logoutURL);
+  }
 
-    loggedIn() {
-        return this.dataSource.isAuthorized();
-    }
+  loggedIn() {
+    return this.dataSource.isAuthorized();
+  }
 
-    async authorize(token) {
-        return this.dataSource.authorize(token);
-    }
+  async authorize(token) {
+    return this.dataSource.authorize(token);
+  }
 }
 
 export {
-    Django,
+  Django,
 };
 ```
 
@@ -375,94 +395,95 @@ export {
 `LoginForm` ([login-form.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/login-form.jsx)) renders a couple text fields and a button. Its source code is fairly straight forward:
 
 ```javascript
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useListener } from 'relaks';
 
 function LoginForm(props) {
-    const { django } = props;
-    const [ usename, setUsername ] = useState('');
-    const [ password, setPassword ] = useState('');
-    const [ error, setError ] = useState();
-    const disabled = !username.trim() || !password.trim();
+  const { django } = props;
+  const [ usename, setUsername ] = useState('');
+  const [ password, setPassword ] = useState('');
+  const [ error, setError ] = useState();
+  const disabled = !username.trim() || !password.trim();
 
-    const handleUsernameChange = useCallback((evt) => {
-        setUsername(evt.target.value);
-    });
-    const handlePasswordChange = useCallback((evt) => {
-        setPassword(evt.target.value);
-    });
-    const handleFormSubmit = useCallback(async (evt) => {
-        evt.preventDefault();
-        try {
-            let credentials = { username, password };
-            if (username.indexOf('@') !== -1) {
-                credentials = { email: username, password };
-            }
-            await django.logIn(credentials);
-        } catch (err) {
-            setError(err);
-        }
-    }, [ django ]);
-
-    return (
-        <div className="login-form">
-            {renderError()}
-            <form onSubmit={handleFormSubmit}>
-                <div className="label">Username or E-mail:</div>
-                <div className="field">
-                    <input type="text" value={username} onChange={handleUsernameChange} />
-                </div>
-                <div className="label">Password:</div>
-                <div className="field">
-                    <input type="password" value={password} onChange={handlePasswordChange} />
-                </div>
-                <div className="buttons">
-                    <button type="submit" disabled={disabled}>
-                        Log in
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
-
-    function renderError() {
-        if (!error) {
-            return null;
-        }
-        return <div className="error">Error: {error.message}</div>
+  const handleUsernameChange = useListener((evt) => {
+    setUsername(evt.target.value);
+  });
+  const handlePasswordChange = useListener((evt) => {
+    setPassword(evt.target.value);
+  });
+  const handleFormSubmit = useListener(async (evt) => {
+    evt.preventDefault();
+    try {
+      let credentials = { username, password };
+      if (username.indexOf('@') !== -1) {
+        credentials = { email: username, password };
+      }
+      await django.logIn(credentials);
+    } catch (err) {
+      setError(err);
     }
+  });
+
+  return (
+    <div className="login-form">
+      {renderError()}
+      <form onSubmit={handleFormSubmit}>
+        <div className="label">Username or E-mail:</div>
+        <div className="field">
+          <input type="text" value={username} onChange={handleUsernameChange} />
+        </div>
+        <div className="label">Password:</div>
+        <div className="field">
+          <input type="password" value={password} onChange={handlePasswordChange} />
+        </div>
+        <div className="buttons">
+          <button type="submit" disabled={disabled}>
+            Log in
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+
+  function renderError() {
+    if (!error) {
+      return null;
+    }
+    return <div className="error">Error: {error.message}</div>
+  }
 }
 
 export {
-    LoginForm,
+  LoginForm,
 };
 ```
 
 The event handlers given to the input fields save text into the form's state:
 
 ```javascript
-    const handleUsernameChange = useCallback((evt) => {
-        setUsername(evt.target.value);
-    });
-    const handlePasswordChange = useCallback((evt) => {
-        setPassword(evt.target.value);
-    });
+  const handleUsernameChange = useListener((evt) => {
+    setUsername(evt.target.value);
+  });
+  const handlePasswordChange = useListener((evt) => {
+    setPassword(evt.target.value);
+  });
 ```
 
 When the user clicks the button, the form element fires a `submit` event. We try to log into the system by calling `django.logIn()` with the user-provided credentials:
 
 ```javascript
-const handleFormSubmit = useCallback(async (evt) => {
-    evt.preventDefault();
-    try {
-        let credentials = { username, password };
-        if (username.indexOf('@') !== -1) {
-            credentials = { email: username, password };
-        }
-        await django.logIn(credentials);
-    } catch (err) {
-        setError(err);
+const handleFormSubmit = useListener(async (evt) => {
+  evt.preventDefault();
+  try {
+    let credentials = { username, password };
+    if (username.indexOf('@') !== -1) {
+      credentials = { email: username, password };
     }
-}, [ django ]);
+    await django.logIn(credentials);
+  } catch (err) {
+    setError(err);
+  }
+});
 ```
 
 If authentication succeeds, the data source will emit an `authorization` event, `FrontEnd` will rerender and `LoginForm` will be unmounted--we're done here. If it doesn't, we save the error object to the form's state so it can be shown to the user.
@@ -472,27 +493,28 @@ If authentication succeeds, the data source will emit an `authorization` event, 
 `LogoutButton` ([logout-button.jsx](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/logout-button.jsx)) is very simple. It renders a button when the user is logged in and nothing when he's not:
 
 ```javascript
-import React, { useCallback } from 'react';
+import React from 'react';
+import { useListener } from 'relaks';
 
 function LogoutButton(props) {
-    const { django } = props;
+  const { django } = props;
 
-    const handleClick = useCallback(async (evt) => {
-        await django.logOut();
-    }, [ django ]);
+  const handleClick = useListener(async (evt) => {
+    await django.logOut();
+  });
 
-    if (!django.loggedIn()) {
-        return null;
-    }
-    return (
-        <button className="logout" onClick={handleClick}>
-            Log out
-        </button>
-    );
+  if (!django.loggedIn()) {
+    return null;
+  }
+  return (
+    <button className="logout" onClick={handleClick}>
+      Log out
+    </button>
+  );
 }
 
 export {
-    LogoutButton,
+  LogoutButton,
 };
 ```
 
@@ -508,54 +530,54 @@ import Relaks, { useProgress } from 'relaks';
 import { TodoView } from 'todo-view';
 
 async function TodoList(props) {
-    const { django } = props;
-    const [ show ] = useProgress();
+  const { django } = props;
+  const [ show ] = useProgress();
 
-    render();
-    const options = {
-        afterInsert: 'push',
-        afterUpdate: 'replace',
-        afterDelete: 'remove',
-    };
-    const todos = await django.fetchList('/', options);
-    render();
+  render();
+  const options = {
+    afterInsert: 'push',
+    afterUpdate: 'replace',
+    afterDelete: 'remove',
+  };
+  const todos = await django.fetchList('/', options);
+  render();
 
-    function render() {
-        if (!todos) {
-            show(<div>Loading...</div>);
-        } else {
-            show(
-                <ul className="todo-list">
-                    {todos.map(renderTodo)}
-                    <TodoView key={0} django={django} />
-                </ul>
-            );
-        }
+  function render() {
+    if (!todos) {
+      show(<div>Loading...</div>);
+    } else {
+      show(
+        <ul className="todo-list">
+          {todos.map(renderTodo)}
+          <TodoView key={0} django={django} />
+        </ul>
+      );
     }
+  }
 
-    function renderTodo(todo) {
-        return <TodoView key={todo.id} django={django} todo={todo} />;
-    }
+  function renderTodo(todo) {
+    return <TodoView key={todo.id} django={django} todo={todo} />;
+  }
 }
 
 const component = Relaks.memo(TodoList);
 
 export {
-    component as TodoList,
+  component as TodoList,
 };
 ```
 
 The following is the core logic of the component:
 
 ```javascript
-    render();
-    const options = {
-        afterInsert: 'push',
-        afterUpdate: 'replace',
-        afterDelete: 'remove',
-    };
-    const todos = await django.fetchList('/', options);
-    render();
+  render();
+  const options = {
+    afterInsert: 'push',
+    afterUpdate: 'replace',
+    afterDelete: 'remove',
+  };
+  const todos = await django.fetchList('/', options);
+  render();
 ```
 
 Render without data. Fetch data. Render with data. It's pretty simple.
@@ -565,22 +587,22 @@ The options given to `fetchList()` are [hooks](https://github.com/trambarhq/rela
 `render()` uses `show()` from the `useProgress` hook to render the component's UI. This helper function in turn calls another helper function:
 
 ```javascript
-    function render() {
-        if (!todos) {
-            show(<div>Loading...</div>);
-        } else {
-            show(
-                <ul className="todo-list">
-                    {todos.map(renderTodo)}
-                    <TodoView key={0} django={django} />
-                </ul>
-            );
-        }
+  function render() {
+    if (!todos) {
+      show(<div>Loading...</div>);
+    } else {
+      show(
+        <ul className="todo-list">
+          {todos.map(renderTodo)}
+          <TodoView key={0} django={django} />
+        </ul>
+      );
     }
+  }
 
-    function renderTodo(todo) {
-        return <TodoView key={todo.id} django={django} todo={todo} />;
-    }
+  function renderTodo(todo) {
+    return <TodoView key={todo.id} django={django} todo={todo} />;
+  }
 ```
 
 An extra item is rendered at the end for adding new todo. It has a key of 0 and its `todo` prop will be `undefined`.
@@ -591,150 +613,138 @@ An extra item is rendered at the end for adding new todo. It has a key of 0 and 
 
 ```javascript
 import _ from 'lodash';
-import React, { useState, useCallback, useRef } from 'react';
-import { useSaveBuffer, useStickySelection } from 'relaks';
-import { mergeObjects } from 'merge-utils';
-import { preserveObject, restoreObject } from 'storage-utils';
+import React, { useState, useRef } from 'react';
+import { useListener, useSaveBuffer, useStickySelection } from 'relaks';
+import { mergeObjects } from './merge-utils.js';
+import { preserveObject, restoreObject } from './storage-utils.js';
 
 function TodoView(props) {
-    const { django, todo } = props;
-    const draft = useSaveBuffer({
-        original: _.defaults(todo, { title: '', description: '' }),
-        compare: _.isEqual,
-        merge: mergeObjects,
-        save: async (base, ours) => {
-            return django.saveOne('/', ours);
-        },
-        delete: async (base, ours) => {
-            return django.deleteOne('/', todo);
-        },
-        preserve: (base, ours) => {
-            preserveObject('draft', ours);
-        },
-        restore: (base) => {
-            return restoreObject('draft', base);
-        },
-    });
-    const [ editing, setEditing ] = useState(draft.changed);
-    const [ expanded, setExpanded ] = useState(draft.changed);
+  const { django, todo } = props;
+  const draft = useSaveBuffer({
+    original: _.defaults(todo, { title: '', description: '' }),
+    compare: _.isEqual,
+    merge: mergeObjects,
+    preserve: (base, ours) => {
+      preserveObject('todo', ours);
+    },
+    restore: (base) => {
+      return restoreObject('todo', base);
+    },
+  });
+  const [ editing, setEditing ] = useState(draft.changed);
+  const [ expanded, setExpanded ] = useState(draft.changed);
 
-    const titleRef = useRef();
-    const descriptionRef = useRef();
-    useStickySelection([ titleRef, descriptionRef ]);
+  const titleRef = useRef();
+  const descriptionRef = useRef();
+  useStickySelection([ titleRef, descriptionRef ]);
 
-    const handleTitleClick = useCallback((evt) => {
-        setExpanded(!expanded);
-    }, [ expanded ]);
-    const handleEditClick = useCallback((evt) => {
-        setEditing(true);
-    });
-    const handleDeleteClick = useCallback(async (evt) => {
-        draft.delete();
-    });
-    const handleSaveClick = useCallback(async (evt) => {
-        await draft.save();
-        setEditing(false);
-        draft.reset();
-    });
-    const handleCancelClick = useCallback((evt) => {
-        setEditing(false);
-        draft.reset();
-    });
-    const handleTitleChange = useCallback((evt) => {
-        draft.assign({ title: evt.target.value });
-    });
-    const handleDescriptionChange = useCallback((evt) => {
-        draft.assign({ description: evt.target.value });
-    });
+  const handleTitleClick = useListener((evt) => {
+    setExpanded(!expanded);
+  });
+  const handleEditClick = useListener((evt) => {
+    setEditing(true);
+  });
+  const handleDeleteClick = useListener(async (evt) => {
+    await django.deleteOne('/', todo);
+  });
+  const handleSaveClick = useListener(async (evt) => {
+    await django.saveOne('/', draft.current);
+    setEditing(false);
+    draft.reset();
+  });
+  const handleCancelClick = useListener((evt) => {
+    setEditing(false);
+    draft.reset();
+  });
+  const handleTitleChange = useListener((evt) => {
+    draft.assign({ title: evt.target.value });
+  });
+  const handleDescriptionChange = useListener((evt) => {
+    draft.assign({ description: evt.target.value });
+  });
 
-    if (editing) {
-        return renderEditor();
-    } else if (todo) {
-        return renderView();
-    } else {
-        return renderAddButton();
+  if (editing) {
+    return renderEditor();
+  } else if (todo) {
+    return renderView();
+  } else {
+    return renderAddButton();
+  }
+
+  function renderView() {
+    const { title, description } = todo;
+    const classNames = [ 'todo-view' ];
+    if (expanded) {
+      classNames.push('expanded');
     }
+    return (
+      <li className={classNames.join(' ')}>
+        <div className="title">
+          <span onClick={handleTitleClick}>{title}</span>
+        </div>
+        <div className="extra">
+          <div className="description">{description}</div>
+          <div className="buttons">
+            <button onClick={handleEditClick}>Edit</button>
+            <button onClick={handleDeleteClick}>Delete</button>
+          </div>
+        </div>
+      </li>
+    );
+  }
 
-    function renderView() {
-        const { title, description } = todo;
-        const classNames = [ 'todo-view' ];
-        if (expanded) {
-            classNames.push('expanded');
-        }
-        return (
-            <li className={classNames.join(' ')}>
-                <div className="title">
-                    <span onClick={handleTitleClick}>{title}</span>
-                </div>
-                <div className="extra">
-                    <div className="description">{description}</div>
-                    <div className="buttons">
-                        <button onClick={handleEditClick}>Edit</button>
-                        <button onClick={handleDeleteClick}>Delete</button>
-                    </div>
-                </div>
-            </li>
-        );
-    }
+  function renderEditor() {
+    const { title, description } = draft.current;
+    const empty = !_.trim(title) || !_.trim(description);
+    const disabled = !draft.changed || empty;
+    return (
+      <li className="todo-view expanded edit">
+        <div className="title">
+          <input ref={titleRef} type="text" value={title} onChange={handleTitleChange} />
+        </div>
+        <div className="extra">
+          <div className="description">
+            <textarea ref={descriptionRef} value={description} onChange={handleDescriptionChange} />
+          </div>
+          <div className="buttons">
+            <button onClick={handleSaveClick} disabled={disabled}>Save</button>
+            <button onClick={handleCancelClick}>Cancel</button>
+          </div>
+        </div>
+      </li>
+    );
+  }
 
-    function renderEditor() {
-        const { title, description } = draft.current;
-        const empty = !_.trim(title) || !_.trim(description);
-        const disabled = !draft.changed || empty;
-        return (
-            <li className="todo-view expanded edit">
-                <div className="title">
-                    <input ref={titleRef} type="text" value={title} onChange={handleTitleChange} />
-                </div>
-                <div className="extra">
-                    <div className="description">
-                        <textarea ref={descriptionRef} value={description} onChange={handleDescriptionChange} />
-                    </div>
-                    <div className="buttons">
-                        <button onClick={handleSaveClick} disabled={disabled}>Save</button>
-                        <button onClick={handleCancelClick}>Cancel</button>
-                    </div>
-                </div>
-            </li>
-        );
-    }
-
-    function renderAddButton() {
-        return (
-            <li className="todo-view add">
-                <span className="add-button" onClick={handleEditClick}>
-                    Add new item
-                </span>
-            </li>
-        );
-    }
+  function renderAddButton() {
+    return (
+      <li className="todo-view add">
+        <span className="add-button" onClick={handleEditClick}>
+          Add new item
+        </span>
+      </li>
+    );
+  }
 }
 
 export {
-    TodoView,
+  TodoView,
 };
 ```
 
 The function first obtains a **save buffer** from `useSaveBuffer`, a utility hook provided by Relaks. The buffer is used to hold local changes before they're sent to the server.
 
 ```javascript
-    const draft = useSaveBuffer({
-        original: _.defaults(todo, { title: '', description: '' }),
-        compare: _.isEqual,
-        merge: mergeObjects,
-        save: async (base, ours) => {
-            return django.saveOne('/', ours);
-        },
-        delete: async (base, ours) => {
-            return django.deleteOne('/', base);
-        },
-        preserve: (base, ours) => {
-            preserveObject('draft', ours);
-        },
-        restore: (base) => {
-            return restoreObject('draft', base);
-        },
-    });
+  const draft = useSaveBuffer({
+    original: _.defaults(todo, { title: '', description: '' }),
+    compare: _.isEqual,
+    merge: mergeObjects,
+    preserve: (base, ours) => {
+      preserveObject('draft', ours);
+    },
+    restore: (base) => {
+      return restoreObject('draft', base);
+    },
+  });
 ```
 
 `useSaveBuffer` accepts an object as its only parameter. `original` holds a copy of the object from the remote server. Here we're using lodash's `defaults()` to ensure it has the expected properties. Recall that `todo` can be `undefined`.
@@ -745,10 +755,6 @@ The function first obtains a **save buffer** from `useSaveBuffer`, a utility hoo
 
 The implementation provided in this example is fairly sophisticated. It allows multiple users to edit different sections of the same text. You can see the code [here](https://github.com/trambarhq/relaks-django-todo-example/blob/master/src/merge-utils.js).
 
-`save` is an asynchronous function for saving the object. It's given two parameters: `base` and `ours`. `base` is the original object (i.e. the object in `original`) while `ours` is the object with local changes.
-
-`delete` is an asynchronous function for deleting the object. It's likewise given `base` and `ours`.
-
 `preserve` is a function for saving changes temporarily in local storage, in case the user accidentally hits the reload button (or the browser crashes). Its use isn't required but it's a nice feature to have.
 
 `restore` is a function that loads the temporarily saved object.
@@ -758,48 +764,48 @@ You can see the code for `preserveObject()` and `restoreObject()` [here](https:/
 `draft.current` holds the save buffer's current value. Initially, it's going to be the same as `original` and `draft.changed` will be false. Values from `draft.current` are used to populate our input fields:
 
 ```javascript
-    function renderEditor() {
-        const { title, description } = draft.current;
-        const empty = !_.trim(title) || !_.trim(description);
-        const disabled = !draft.changed || empty;
-        return (
-            <li className="todo-view expanded edit">
-                <div className="title">
-                    <input ref={titleRef} type="text" value={title} onChange={handleTitleChange} />
-                </div>
-                <div className="extra">
-                    <div className="description">
-                        <textarea ref={descriptionRef} value={description} onChange={handleDescriptionChange} />
-                    </div>
-                    <div className="buttons">
-                        <button onClick={handleSaveClick} disabled={disabled}>Save</button>
-                        <button onClick={handleCancelClick}>Cancel</button>
-                    </div>
-                </div>
-            </li>
-        );
-    }
+  function renderEditor() {
+    const { title, description } = draft.current;
+    const empty = !_.trim(title) || !_.trim(description);
+    const disabled = !draft.changed || empty;
+    return (
+      <li className="todo-view expanded edit">
+        <div className="title">
+          <input ref={titleRef} type="text" value={title} onChange={handleTitleChange} />
+        </div>
+        <div className="extra">
+          <div className="description">
+            <textarea ref={descriptionRef} value={description} onChange={handleDescriptionChange} />
+          </div>
+          <div className="buttons">
+            <button onClick={handleSaveClick} disabled={disabled}>Save</button>
+            <button onClick={handleCancelClick}>Cancel</button>
+          </div>
+        </div>
+      </li>
+    );
+  }
 ```
 
 When the user makes changes through the input fields, `draft.assign()` is called to modify the object:
 
 ```javascript
-    const handleTitleChange = useCallback((evt) => {
-        draft.assign({ title: evt.target.value });
-    });
-    const handleDescriptionChange = useCallback((evt) => {
-        draft.assign({ description: evt.target.value });
-    });
+  const handleTitleChange = useListener((evt) => {
+    draft.assign({ title: evt.target.value });
+  });
+  const handleDescriptionChange = useListener((evt) => {
+    draft.assign({ description: evt.target.value });
+  });
 ```
 
-When the user clicks the Save button, `draft.save()` will be called, which basically invokes the corresponding function given to `useSaveBuffer`.
+When the user clicks the Save button, we call `django.saveOne()` to save changes held in the save buffer:
 
 ```javascript
-    const handleSaveClick = useCallback(async (evt) => {
-        await draft.save();
-        setEditing(false);
-        draft.reset();
-    });
+  const handleSaveClick = useListener(async (evt) => {
+    await django.saveOne('/', draft.current);
+    setEditing(false);
+    draft.reset();
+  });
 ```
 
 After the object is saved, we call `setEditing()` to exit edit mode and `draft.reset()` to reset the buffer to the initial state. This is done so that the instance of `TodoView` with key = 0 won't retain the title and description after a new todo is added.
@@ -807,18 +813,18 @@ After the object is saved, we call `setEditing()` to exit edit mode and `draft.r
 When the user clicks the Cancel button, the same method is called:
 
 ```javascript
-    const handleCancelClick = useCallback((evt) => {
-        setEditing(false);
-        draft.reset();
-    });
+  const handleCancelClick = useListener((evt) => {
+    setEditing(false);
+    draft.reset();
+  });
 ```
 
 We use the utility hook `useStickySelection` (provided by Relaks) to maintain the cursor position when new data arrives from the remote server. Without it, concurrent editing would get incredibly annoying as the cursor would continually jump to the end.
 
 ```javascript
-    const titleRef = useRef();
-    const descriptionRef = useRef();
-    useStickySelection([ titleRef, descriptionRef ]);
+  const titleRef = useRef();
+  const descriptionRef = useRef();
+  useStickySelection([ titleRef, descriptionRef ]);
 ```
 
 The hook accepts an array of refs from `useRef`.
@@ -826,8 +832,8 @@ The hook accepts an array of refs from `useRef`.
 Two state variables, `editing` and `expanded`, are used to track the whether we're editing the todo and whether the view has been expanded:
 
 ```javascript
-const [ editing, setEditing ] = useState(draft.changed);
-const [ expanded, setExpanded ] = useState(draft.changed);
+  const [ editing, setEditing ] = useState(draft.changed);
+  const [ expanded, setExpanded ] = useState(draft.changed);
 ```
 
 Their initial values are `draft.changed`. Usually it'll be `false`. If unsaved changes were saved to local storage, however, `draft.changed` will be `true` from the very beginning. The component would then start out in edit mode.
@@ -835,54 +841,52 @@ Their initial values are `draft.changed`. Usually it'll be `false`. If unsaved c
 In read-only mode (`editing = false`), only the title of the todo is shown initially. The description, along with a couple buttons, are rendered into a div that's clipped off using CSS. These are shown when the user expands the item by clicking on the title.
 
 ```javascript
-    function renderView() {
-        const { title, description } = todo;
-        const className = 'todo-view';
-        if (expanded) {
-            className += ' expanded';
-        }
-        return (
-            <li className={className}>
-                <div className="title">
-                    <span onClick={handleTitleClick}>{title}</span>
-                </div>
-                <div className="extra">
-                    <div className="description">{description}</div>
-                    <div className="buttons">
-                        <button onClick={handleEditClick}>Edit</button>
-                        <button onClick={handleDeleteClick}>Delete</button>
-                    </div>
-                </div>
-            </li>
-        );
+  function renderView() {
+    const { title, description } = todo;
+    const className = 'todo-view';
+    if (expanded) {
+      className += ' expanded';
     }
+    return (
+      <li className={className}>
+        <div className="title">
+          <span onClick={handleTitleClick}>{title}</span>
+        </div>
+        <div className="extra">
+          <div className="description">{description}</div>
+          <div className="buttons">
+            <button onClick={handleEditClick}>Edit</button>
+            <button onClick={handleDeleteClick}>Delete</button>
+          </div>
+        </div>
+      </li>
+    );
+  }
 ```
 
 The click handler toggles `expanded`:
 
 ```javascript
-    const handleTitleClick = useCallback((evt) => {
-        setExpanded(!expanded);
-    }, [ expanded ]);
+  const handleTitleClick = useListener((evt) => {
+    setExpanded(!expanded);
+  });
 ```
 
 When the user clicks the edit button, we enter edit mode:
 
 ```javascript
-    const handleEditClick = useCallback((evt) => {
-        setEditing(true);
-    });
+  const handleEditClick = useListener((evt) => {
+    setEditing(true);
+  });
 ```
 
-If the user clicks the delete button, we call `draft.delete()`:
+If the user clicks the delete button, we call `django.deleteOne` to delete the object:
 
 ```javascript
-    const handleDeleteClick = useCallback(async (evt) => {
-        draft.delete();
-    });
+  const handleDeleteClick = useListener(async (evt) => {
+    await django.deleteOne('/', todo);
+  });
 ```
-
-`useSaveBuffer` will always return the same object for a given component instance. That's why we don't need to pass a variable list to `useCallback` here (or with the other handlers that use `draft`).
 
 ## Update cycle
 

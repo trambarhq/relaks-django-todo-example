@@ -1,26 +1,26 @@
 import React, { Component } from 'react';
 
 class ErrorBoundary extends Component {
-    constructor(props) {
-        super(props);
-        this.state = { error: null };
-    }
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
 
-    render() {
-        let { children } = this.props;
-        let { error } = this.state;
-        if (error) {
-            return <div className="error-boundary">{error.message}</div>;
-        }
-        return children || null;
+  render() {
+    const { children } = this.props;
+    const { error } = this.state;
+    if (error) {
+      return <div className="error-boundary">{error.message}</div>;
     }
+    return children || null;
+  }
 
-    componentDidCatch(error, info) {
-        let { env } = this.props;
-        this.setState({ error });
-    }
+  componentDidCatch(error, info) {
+    let { env } = this.props;
+    this.setState({ error });
+  }
 }
 
 export {
-    ErrorBoundary,
+  ErrorBoundary,
 };

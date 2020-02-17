@@ -1,21 +1,21 @@
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 BODY {
-    font-family: sans-serif;
+  font-family: sans-serif;
 }
 
 .logout {
-    float: right;
+  float: right;
 }
 
 .error-boundary {
-    color: red;
-    font-size: 2em;
-    border: 3px double red;
-    text-align: center;
-    padding: 0.5em;
+  color: red;
+  font-size: 2em;
+  border: 3px double red;
+  text-align: center;
+  padding: 0.5em;
 }
 
 .todo-list {
@@ -23,103 +23,103 @@ BODY {
 }
 
 .todo-view {
-    max-width: 30em;
+  max-width: 30em;
 
+  .extra {
+    display: none;
+  }
+
+  .title {
+    padding-top: 0.25em;
+    padding-bottom: 0.25em;
+
+    SPAN {
+      cursor: pointer;
+    }
+
+    INPUT[type=text] {
+      width: 100%;
+    }
+  }
+
+  .description {
+    padding-top: 0.25em;
+    padding-bottom: 0.25em;
+    border-top: 1px solid #666;
+    border-bottom: 1px solid #666;
+    color: #444;
+    white-space: pre-wrap;
+    TEXTAREA {
+      width: 100%;
+      height: 8em;
+    }
+  }
+
+  .buttons {
+    padding-top: 0.25em;
+    text-align: right;
+
+    BUTTON {
+      margin-left: 0.25em;
+    }
+  }
+
+  &.expanded {
     .extra {
-        display: none;
+      display: block;
     }
+  }
 
-    .title {
-        padding-top: 0.25em;
-        padding-bottom: 0.25em;
-
-        SPAN {
-            cursor: pointer;
-        }
-
-        INPUT[type=text] {
-            width: 100%;
-        }
-    }
-
+  &.edit {
     .description {
-        padding-top: 0.25em;
-        padding-bottom: 0.25em;
-        border-top: 1px solid #666;
-        border-bottom: 1px solid #666;
-        color: #444;
-        white-space: pre-wrap;
-        TEXTAREA {
-            width: 100%;
-            height: 8em;
-        }
+      padding-top: 0;
+      padding-bottom: 0;
+      border-width: 0;
     }
+  }
 
-    .buttons {
-        padding-top: 0.25em;
-        text-align: right;
+  &.add {
+    padding-top: 0.25em;
+    padding-bottom: 0.25em;
+    list-style-type: circle;
+    color: #999;
 
-        BUTTON {
-            margin-left: 0.25em;
-        }
+    .add-button {
+      cursor: pointer;
     }
-
-    &.expanded {
-        .extra {
-            display: block;
-        }
-    }
-
-    &.edit {
-        .description {
-            padding-top: 0;
-            padding-bottom: 0;
-            border-width: 0;
-        }
-    }
-
-    &.add {
-        padding-top: 0.25em;
-        padding-bottom: 0.25em;
-        list-style-type: circle;
-        color: #999;
-
-        .add-button {
-            cursor: pointer;
-        }
-    }
+  }
 }
 
 .login-form {
-    max-width: 20em;
+  max-width: 20em;
 
-    .label {
-        padding: 6px 8px 0 8px;
+  .label {
+    padding: 6px 8px 0 8px;
+  }
+
+  .field {
+    padding: 2px 8px 4px 8px;
+
+    INPUT {
+      width: 100%;
     }
+  }
 
-    .field {
-        padding: 2px 8px 4px 8px;
+  .buttons {
+    text-align: right;
+    padding: 8px 8px 2px 8px;
+    margin-top: 4px;
+    border-top: 1px solid #999999;
 
-        INPUT {
-            width: 100%;
-        }
+    BUTTON {
+      font-size: 1.4em;
+      margin-left: 8px;
     }
+  }
 
-    .buttons {
-        text-align: right;
-        padding: 8px 8px 2px 8px;
-        margin-top: 4px;
-        border-top: 1px solid #999999;
-
-        BUTTON {
-            font-size: 1.4em;
-            margin-left: 8px;
-        }
-    }
-
-    .error {
-        font-weight: bold;
-        color: #cc0000;
-        padding: 8px 8px 4px 8px;
-    }
+  .error {
+    font-weight: bold;
+    color: #cc0000;
+    padding: 8px 8px 4px 8px;
+  }
 }
