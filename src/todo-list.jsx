@@ -1,8 +1,8 @@
 import React from 'react';
-import Relaks, { useProgress } from 'relaks';
+import { useProgress } from 'relaks';
 import { TodoView } from './todo-view.jsx';
 
-async function TodoList(props) {
+export async function TodoList(props) {
   const { django } = props;
   const [ show ] = useProgress();
 
@@ -34,9 +34,3 @@ async function TodoList(props) {
     return <TodoView key={todo.id} django={django} todo={todo} />;
   }
 }
-
-const component = Relaks.memo(TodoList);
-
-export {
-  component as TodoList,
-};

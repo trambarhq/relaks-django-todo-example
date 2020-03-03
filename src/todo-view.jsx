@@ -4,7 +4,7 @@ import { useListener, useSaveBuffer, useStickySelection } from 'relaks';
 import { mergeObjects } from './merge-utils.js';
 import { preserveObject, restoreObject } from './storage-utils.js';
 
-function TodoView(props) {
+export function TodoView(props) {
   const { django, todo } = props;
   const draft = useSaveBuffer({
     original: _.defaults(todo, { title: '', description: '' }),
@@ -111,7 +111,3 @@ function TodoView(props) {
     );
   }
 }
-
-export {
-  TodoView,
-};

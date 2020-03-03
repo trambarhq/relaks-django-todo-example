@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useListener } from 'relaks';
 
-function LoginForm(props) {
+export function LoginForm(props) {
   const { django } = props;
   const [ username, setUsername ] = useState('');
   const [ password, setPassword ] = useState('');
@@ -55,7 +55,3 @@ function LoginForm(props) {
     return <div className="error">Error: {error.message}</div>
   }
 }
-
-export {
-  LoginForm,
-};

@@ -8,7 +8,7 @@ import { ErrorBoundary } from './error-boundary.jsx';
 
 import './style.scss';
 
-function FrontEnd(props) {
+export function FrontEnd(props) {
   const { dataSource } = props;
   const [ dataChanged, setDataChanged ] = useEventTime();
   const [ authenticating, setAuthenticating ] = useState(false);
@@ -68,7 +68,3 @@ function FrontEnd(props) {
     );
   }
 }
-
-export {
-  FrontEnd
-};

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useListener } from 'relaks';
 
-function LogoutButton(props) {
+export function LogoutButton(props) {
   const { django } = props;
 
   const handleClick = useListener(async (evt) => {
@@ -17,7 +17,3 @@ function LogoutButton(props) {
     </button>
   );
 }
-
-export {
-  LogoutButton,
-};

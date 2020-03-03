@@ -25,6 +25,7 @@ module.exports = {
           ],
           plugins: [
             '@babel/transform-runtime',
+            'relaks/transform-memo',
           ]
         }
       },
@@ -43,10 +44,10 @@ module.exports = {
       template: Path.resolve(`./src/index.html`),
       filename: Path.resolve(`./www/index.html`),
     }),
-//    new BundleAnalyzerPlugin({
-//      analyzerMode: (event === 'build') ? 'static' : 'disabled',
-//      reportFilename: `report.html`,
-//    }),
+    new BundleAnalyzerPlugin({
+      analyzerMode: (event === 'build') ? 'static' : 'disabled',
+      reportFilename: `report.html`,
+    }),
   ],
   optimization: {
     concatenateModules: false,
